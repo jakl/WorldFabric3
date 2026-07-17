@@ -632,7 +632,7 @@ void SteamworksPlugin::OnNewUrlLaunchParameters(NewUrlLaunchParameters_t* pCallb
 // This does mean the time when the overlay takes over input focus from the game.
 //-----------------------------------------------------------------------------
 void SteamworksPlugin::OnGameOverlayActivated(GameOverlayActivated_t* callback){
-	//printf("OnGameOverlayActivated(\n");
+	printf("OnGameOverlayActivated(\n");
 	//TODO
 }
 
@@ -650,15 +650,15 @@ void SteamworksPlugin::OnGameWebCallback(GameWebCallback_t* callback){
 // Purpose: Handle any connection status change
 //-----------------------------------------------------------------------------
 void SteamworksPlugin::OnClientConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* call_back){
-	//printf("OnClientConnectionStatusChanged\n");
+	printf("OnClientConnectionStatusChanged\n");
 
 	HSteamNetConnection connection = call_back->m_hConn;
 	SteamNetConnectionInfo_t info = call_back->m_info;
 	ESteamNetworkingConnectionState old_state = call_back->m_eOldState;
 	ESteamNetworkingConnectionState new_state = info.m_eState;
 
-	//printf("Connection: %d  Listen socket:%d\n", connection, info.m_hListenSocket);
-	//printf("Old State: %d New State: %d\n", old_state, new_state);
+	printf("Connection: %d  Listen socket:%d\n", connection, info.m_hListenSocket);
+	printf("Old State: %d New State: %d\n", old_state, new_state);
 
 	// Parse information to know what was changed
 
@@ -787,7 +787,7 @@ void SteamworksPlugin::SteamSocket::addServerClient(HSteamNetConnection connecti
 	if(packet_receiver != nullptr){
 		packet_receiver->onSocketConnect(next_player);
 	}
-	//printf("Steam id %lld added as player %d\n", user_id.ConvertToUint64(), next_player);
+	printf("Steam id %lld added as player %d\n", user_id.ConvertToUint64(), next_player);
 	next_player++;
 }
 
@@ -805,7 +805,7 @@ void SteamworksPlugin::SteamSocket::removeServerClient(CSteamID user_id) {
 	if (packet_receiver != nullptr) {
 		packet_receiver->onSocketClose(player_id);
 	}
-	//printf("Steam id %lld added as player %d\n", user_id.ConvertToUint64(), player_id);
+	printf("Steam id %lld added as player %d\n", user_id.ConvertToUint64(), player_id);
 }
 
 void SteamworksPlugin::SteamSocket::removeServerClient(int player) {
@@ -828,7 +828,7 @@ bool SteamworksPlugin::SteamSocket::connected(){
 // Returns if data seems to have sent (we can't know now if it arrived)
 bool SteamworksPlugin::SteamSocket::send(int receiver_id, const std::vector<char>& data){
 	if(connections.find(receiver_id) == connections.end()){
-		//printf("Attempted to send packet to a connection we don't have: %d\n", receiver_id) ;
+		printf("Attempted to send packet to a connection we don't have: %d\n", receiver_id) ;
 		return false ;
 	}
 

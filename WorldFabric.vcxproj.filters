@@ -1537,6 +1537,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="header\ConstraintTestApp.h">
+		<Filter>Header Files</Filter>
+	</ClInclude>
+    <ClInclude Include="header\ChessApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Board.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Piece.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\glove.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="header\CollisionTestApp.h">
@@ -2150,6 +2162,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\ConstraintTestApp.cpp">
+		<Filter>Source Files</Filter>
+	</ClCompile>
+    <ClCompile Include="source\ChessApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Board.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Piece.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Glove.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\CollisionTestApp.cpp">

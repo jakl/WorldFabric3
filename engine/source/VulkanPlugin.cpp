@@ -154,7 +154,7 @@ bool VulkanPlugin::keyDown(int key_code) {
 }
 
 // Returns the currnet mouse position inte window
-glm::vec2 VulkanPlugin::getMousePosition(){
+glm::vec2 VulkanPlugin::getMousePosition() {
 	return mouse_position;
 }
 
@@ -627,6 +627,9 @@ void VulkanPlugin::processInput(){
 		}
 		else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
 			mouse_down[event.button.button] = false;
+		}
+		else if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+			mouse_wheel_position += glm::vec2({ event.wheel.x, event.wheel.y });
 		}
 		else if (event.type == SDL_EVENT_MOUSE_MOTION) {
 			mouse_position = { event.motion.x,event.motion.y };

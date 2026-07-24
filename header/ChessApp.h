@@ -46,8 +46,6 @@ namespace Chess {
 		void setupScene();
 		void GlowUpHeldPiece();
 
-		//std::shared_ptr<const Piece> cur_held_piece;
-
 		float current_angle = 0;
 		int light_effect_id = -1;
 		std::chrono::high_resolution_clock::time_point last_run_time;

@@ -62,9 +62,6 @@ public:
 	void destroyed() override;
 
 	void receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) override;
-
-	void glowUp();
-
 };
 
 auto static getStructure(Piece& obj) {

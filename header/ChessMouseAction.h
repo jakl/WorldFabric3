@@ -10,5 +10,4 @@ public:
 	bool clicked = false ;
 };
 
-
 #endif // #ifndef _CHESS_CLICK_ACTION_H_

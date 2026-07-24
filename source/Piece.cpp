@@ -52,7 +52,6 @@ void PieceView::created(const Piece& observation) {
 	scene_id = scene->createInstance(observation.model_name, pose);
 	//traceables[scene_id] = observation.id;
 	
-
 	std::shared_ptr<GLTF> model = scene->getModelController(observation.model_name);
 	//Note: multiplying pose by AABB corners only works to prdouce another correct AABB here when pose contains only translation and scale
 	std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0, pose * glm::vec4(model->min, 1), pose * glm::vec4(model->max, 1), this));

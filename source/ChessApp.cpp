@@ -7,7 +7,6 @@
 #include <filesystem>
 
 
-
 namespace Chess {
 	ChessApp::ChessApp() {}
 
@@ -135,7 +134,6 @@ namespace Chess {
 
 	// Called when switching out of this state after the last time run is called
 	void ChessApp::exit(std::shared_ptr<MachineState> to) {
-
 	}
 
 	void ChessApp::updateCamera() {

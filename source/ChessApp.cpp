@@ -2,6 +2,7 @@
 #include "ParticlePlugin.h"
 #include "ScenePlugin.h"
 #include "FlagSet.h"
+#include "ChessMouseAction.h"
 #include <iostream>
 #include <filesystem>
 
@@ -35,9 +36,7 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		SteamworksPlugin* steam = getTool<SteamworksPlugin>();
 
-		PieceView::traceables.clear();
-		cur_held_piece_id = -1;
-		cur_held_piece.reset();
+		mouse_action = std::shared_ptr<ChessMouseAction>(new ChessMouseAction()); // reset the held piece
 
 		std::shared_ptr<Socket> steam_socket = socket; // casting by creation avoids a warning
 		world->disconnect();
@@ -88,11 +87,6 @@ namespace Chess {
 		world->queue("chess", board_id, &Board::init);
 	}
 
-	void ChessApp::setupParticles() {
-		ParticlePlugin* particles = getTool<ParticlePlugin>();
-		mouse_particle_id = particles->createParticle(0);
-	}
-
 	void ChessApp::setupScene() {
 		ScenePlugin* scene = getTool<ScenePlugin>();
 
@@ -115,90 +109,20 @@ namespace Chess {
 		setupScene();
 		registerClassesAndMethods();
 		createWorldAndObjects();
-		setupParticles();
 	}
 
 	//Called every frame while the state is active
 	void ChessApp::run() {
 		VulkanPlugin* window = getTool<VulkanPlugin>();
 		WorldPlugin* world = getTool<WorldPlugin>();
+		ActionMap* action_map = getTool<ActionMap>();
 
-		std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
-
-		// Wait for game to load
-		if (!board) {
-			return;
-		}
-
-		auto boardView = world->getView<BoardView>("chess", board->id);
-
-		// get the 3D ray from the mouse position on the screen
-		glm::vec3 ray_origin = window->window_target->camera_position;
-		glm::vec3 ray_direction = window->getMouseRay();
-		int64_t closest_piece_id = -1;
-		float mouse_ray_t = FLT_MAX;
-
-		// Find which piece is under the mouse
-		for (auto& [scene_id, obj_id] : PieceView::traceables) {
-			std::shared_ptr<PieceView> piece_view = world->getView<PieceView>("chess", obj_id);
-			float cur_t = raytrace(ray_origin, ray_direction, piece_view->scene_id, piece_view->pose);
-			if (cur_t > 0 && cur_t < mouse_ray_t) {
-				closest_piece_id = obj_id;
-				mouse_ray_t = cur_t;
-			}
-		}
-
-		// Left click holds a piece
-		if (window->mouseDown(1) && !mouse_down_left) {
-			if (cur_held_piece) {
-				cur_held_piece_id = -1;
-				cur_held_piece.reset();
-			} else {
-				cur_held_piece_id = closest_piece_id;
-				cur_held_piece = world->observe<Piece>("chess", cur_held_piece_id);
-			}
-		}
-		mouse_down_left = window->mouseDown(1);
-
-		float board_t = raytrace(ray_origin, ray_direction, boardView->scene_id, boardView->pose);
-		if (board_t > 0) {
-			closest_piece_id = -1;
-
-			glm::vec3 mouse_on_board_pos = ray_origin + ray_direction * board_t;
-
-			if (world->amHosting()) {
-				world->queue("chess", board->glove_white_id, &Glove::setPosition, mouse_on_board_pos);
-			}
-			else {
-				if (board->glove_black_id == -1) {
-					world->queue("chess", board->id, &Board::createBlackGlove);
-				}
-				else {
-					world->queue("chess", board->glove_black_id, &Glove::setPosition, mouse_on_board_pos);
-				}
-			}
-
-			if (cur_held_piece) {
-				glm::vec3 mouse_piece_pos = mouse_on_board_pos;
-
-				GlowUpHeldPiece();
-
-				// Place pieces in the middle of squares
-				mouse_piece_pos.x = std::round(mouse_piece_pos.x + .5f) - .5f;
-				mouse_piece_pos.z = std::round(mouse_piece_pos.z + .5f) - .5f;
-
-				// Only send the network event if the position is different
-				if (cur_held_piece->position.x != mouse_piece_pos.x || cur_held_piece->position.z != mouse_piece_pos.z) {
-					world->queue("chess", cur_held_piece_id, &Piece::setPosition, mouse_piece_pos);
-					cur_held_piece = world->observe<Piece>("chess", cur_held_piece_id);
-				}
-			}
-			else {
-
-				ParticlePlugin* particles = getTool<ParticlePlugin>();
-				particles->destroyParticle(mouse_particle_id);
-			}
-		}
+		mouse_action->origin = window->window_target->camera_position ;
+		mouse_action->direction = window->getMouseRay() ;
+		mouse_action->clicked = window->mouseDown(1) && !mouse_down_left ;
+		action_map->performAction(mouse_action) ;
+		mouse_action->held_piece = mouse_action->next_held_piece ;
+		mouse_down_left = window->mouseDown(1) ;
 
 		updateCamera();
 
@@ -208,21 +132,8 @@ namespace Chess {
 		}
 	}
 
-	void ChessApp::GlowUpHeldPiece() {
-		ParticlePlugin* particles = getTool<ParticlePlugin>();
-
-		glm::mat4 particle_pose = glm::mat4(1.0f);
-		particles->setColor(mouse_particle_id, glm::vec4(1, 1, .5, .5)); // glow
-		particle_pose = glm::translate(particle_pose, cur_held_piece->position);
-		particle_pose = glm::scale(particle_pose, glm::vec3(.5f, .1f, .5f));
-		particles->setPose(mouse_particle_id, particle_pose);
-	}
-
 	// Called when switching out of this state after the last time run is called
 	void ChessApp::exit(std::shared_ptr<MachineState> to) {
-		ScenePlugin* scene = getTool<ScenePlugin>();
-		ParticlePlugin* particles = getTool<ParticlePlugin>();
-		particles->destroyParticle(mouse_particle_id);
 	}
 
 	void ChessApp::updateCamera() {

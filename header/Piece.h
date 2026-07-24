@@ -5,7 +5,7 @@
 #include "WorldPlugin.h"
 #include "ScenePlugin.h"
 #include "PanelPlugin.h"
-#include "glm/glm.hpp"
+#include "ChessMouseAction.h"
 #include <stdio.h>
 #include <cstdlib>
 
@@ -44,12 +44,12 @@ public:
 };
 
 
-class PieceView : public ObjectView<Piece> {
+class PieceView : public ObjectView<Piece>, public virtual ActionReceiver<ChessMouseAction> {
 public:
-	int64_t id;
 	int scene_id = -1;
+	int trigger_id = -1;
 	glm::mat4 pose;
-	static inline std::map<int, int64_t> traceables;
+	Piece last_observation;
 
 	//created is called when an objectis observed that ws no observed last time view was called on the world
 	void created(const Piece& observation) override;
@@ -61,8 +61,7 @@ public:
 	//This view will be deleted immediately after this call (it's destructor will be called after this)
 	void destroyed() override;
 
-	//Computes the scene pose of a Piece
-	glm::mat4 computePose(const Piece& Piece);
+	void receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) override;
 };
 
 auto static getStructure(Piece& obj) {

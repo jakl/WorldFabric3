@@ -213,6 +213,7 @@
     <ClInclude Include="header\CollisionTestApp.h" />
     <ClInclude Include="header\ConstraintTestApp.h" />
     <ClInclude Include="header\ChessApp.h" />
+    <ClInclude Include="header\ChessClickAction.h" />
     <ClInclude Include="header\Crate.h" />
     <ClInclude Include="header\Defender.h" />
     <ClInclude Include="header\EarthSpikeDefender.h" />

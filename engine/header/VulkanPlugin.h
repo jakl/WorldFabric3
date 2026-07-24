@@ -553,7 +553,6 @@ private:
 	glm::vec2 mouse_position ;
 	glm::vec2 mouse_wheel_position;
 	glm::vec2 mouse_down_position;
-	glm::vec2 mouse_wheel_position;
 	std::map<int, bool> mouse_down ;
 	bool mouse_hidden = false;
 	bool last_mouse_hidden = false; 

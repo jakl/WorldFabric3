@@ -7,6 +7,7 @@
 #include "Piece.h"
 #include "Board.h"
 #include "SteamworksPlugin.h"
+#include "ActionMap.h"
 
 namespace Chess {
 
@@ -15,7 +16,7 @@ namespace Chess {
 	public:
 
 		static inline const std::string state_name = "chess_state";
-		int64_t cur_held_piece_id = -1;
+		std::shared_ptr<ChessMouseAction> mouse_action  = std::shared_ptr<ChessMouseAction>(new ChessMouseAction()) ;
 		std::chrono::high_resolution_clock::time_point last_moved_mouse = now();
 
 		ChessApp();
@@ -31,7 +32,7 @@ namespace Chess {
 
 		void updateCamera();
 
-		float raytrace(const glm::vec3& pos, const glm::vec3& ray, int scene_id, glm::mat4 pose);
+		static float raytrace(const glm::vec3& pos, const glm::vec3& ray, int scene_id, glm::mat4 pose);
 
 		void onSteamGameExternalJoin(std::shared_ptr<SteamworksPlugin::SteamSocket> socket, const SteamworksPlugin::SteamServerInfo& server_info) override;
 
@@ -45,11 +46,8 @@ namespace Chess {
 		void setupScene();
 		void GlowUpHeldPiece();
 
-		std::shared_ptr<const Piece> cur_held_piece;
-
 		float current_angle = 0;
 		int light_effect_id = -1;
-		int mouse_particle_id = -1;
 		std::chrono::high_resolution_clock::time_point last_run_time;
 		std::chrono::high_resolution_clock::time_point current_time;
 

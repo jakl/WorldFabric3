@@ -5,7 +5,7 @@
 #include "WorldPlugin.h"
 #include "ScenePlugin.h"
 #include "PanelPlugin.h"
-#include "glm/glm.hpp"
+#include "ChessMouseAction.h"
 #include <stdio.h>
 #include <cstdlib>
 #include <Piece.h>
@@ -48,11 +48,14 @@ namespace Chess {
 	};
 
 
-	class BoardView : public ObjectView<Board> {
+	class BoardView : public ObjectView<Board>, public virtual ActionReceiver<ChessMouseAction> {
 	public:
-	    int64_t id = -1;
+		Board last_observation;
 		int scene_id = -1;
+		int trigger_id = -1;
+		int particle_id = -1 ;
 		glm::mat4 pose;
+		
 
 		//created is called when an objectis observed that ws no observed last time view was called on the world
 		void created(const Board& observation) override;
@@ -63,6 +66,10 @@ namespace Chess {
 		//Destroyed is called when an observation that was present in the last observation is no longer observed
 		//This view will be deleted immediately after this call (it's destructor will be called after this)
 		void destroyed() override;
+
+		void receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) override;
+
+		void glowUpHeldPiece(std::shared_ptr<const Piece>& piece) ;
 	};
 
 	auto static getStructure(Board& obj) {

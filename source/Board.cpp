@@ -3,8 +3,8 @@
 #include "VulkanPlugin.h"
 #include "PanelPlugin.h"
 #include "AudioPlugin.h"
-#include "glm/glm.hpp"
-
+#include "ChessApp.h"
+#include "ParticlePlugin.h"
 
 namespace Chess {
 
@@ -56,24 +56,89 @@ namespace Chess {
 
 	void BoardView::created(const Board& observation) {
 		ScenePlugin* scene = getTool<ScenePlugin>();
+		ActionMap* action_map = getTool<ActionMap>();
+		ParticlePlugin* particles = getTool<ParticlePlugin>();
 
-		id = observation.id;
+		last_observation = observation;
+
 		pose = glm::mat4(1.0f);
 		pose = glm::translate(pose, observation.position);
 		scene_id = scene->createInstance(observation.model_name, pose);
+
+		std::shared_ptr<GLTF> model = scene->getModelController(observation.model_name);
+		//Note: multiplying pose by AABB corners only works to prdouce another correct AABB here when pose contains only translation and scale
+		std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0,pose * glm::vec4(model->min,1), pose * glm::vec4(model->max, 1),this)) ;
+		trigger_id = action_map->addTrigger(trigger);
+
+		particle_id = particles->createParticle(0) ;
 	}
 
 	//Update is called when an observation is made of an object that was also observed last frame on this same view
 	void BoardView::updated(const Board& observation) {
-
+		last_observation = observation ;
 	}
 
 	//Destroyed is called when an observation that was present in the last observation is no longer observed
 	//This view will be deleted immediately after this call (it's destructor will be called after this)
 	void BoardView::destroyed() {
-		//printf("Board view destroyed: %ld\n", (long)id);
 		ScenePlugin* scene = getTool<ScenePlugin>();
+		ActionMap* action_map = getTool<ActionMap>();
+		ParticlePlugin* particles = getTool<ParticlePlugin>();
+
 		scene->deleteInstance(scene_id);
+		action_map->removeTrigger(trigger_id);
+		particles->destroyParticle(particle_id);
 	}
 
+	void BoardView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger){
+		WorldPlugin* world = getTool<WorldPlugin>();
+		float board_t = ChessApp::raytrace(action->origin, action->direction, scene_id, pose);
+		glm::vec3 mouse_on_board_pos = action->origin + action->direction * board_t;
+
+		if (world->amHosting()) {
+			world->queue("chess", last_observation.glove_white_id, &Glove::setPosition, mouse_on_board_pos);
+		}
+		else {
+			if (last_observation.glove_black_id == -1) {
+				world->queue("chess", last_observation.id, &Board::createBlackGlove);
+			}
+			else {
+				world->queue("chess", last_observation.glove_black_id, &Glove::setPosition, mouse_on_board_pos);
+			}
+		}
+
+		if (action->held_piece != -1) {
+			std::shared_ptr<const Piece> piece = world->observe<Piece>("chess", action->held_piece);
+			if(piece){
+				glowUpHeldPiece(piece);
+
+				// Place pieces in the middle of squares
+				glm::vec3 mouse_piece_pos = mouse_on_board_pos;
+				mouse_piece_pos.x = std::round(mouse_piece_pos.x + .5f) - .5f;
+				mouse_piece_pos.z = std::round(mouse_piece_pos.z + .5f) - .5f;
+
+				// Only send the network event if the position is different
+				if (piece->position.x != mouse_piece_pos.x || piece->position.z != mouse_piece_pos.z) {
+					world->queue("chess", piece->id, &Piece::setPosition, mouse_piece_pos);
+				}
+			}
+			if(action->clicked || !piece){
+				action->next_held_piece = -1 ; // drop piece
+			}
+		}
+		else {
+
+			ParticlePlugin* particles = getTool<ParticlePlugin>();
+			particles->setPose(particle_id, glm::mat4(0));
+		}
+	}
+
+	void BoardView::glowUpHeldPiece(std::shared_ptr<const Piece>& piece) {
+		ParticlePlugin* particles = getTool<ParticlePlugin>();
+		glm::mat4 particle_pose = glm::mat4(1.0f);
+		particles->setColor(particle_id, glm::vec4(1, 1, .5, .5)); // glow
+		particle_pose = glm::translate(particle_pose, piece->position);
+		particle_pose = glm::scale(particle_pose, glm::vec3(.5f, .1f, .5f));
+		particles->setPose(particle_id, particle_pose);
+	}
 }

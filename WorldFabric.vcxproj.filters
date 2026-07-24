@@ -1551,10 +1551,7 @@
     <ClInclude Include="header\glove.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="header\CollisionTestApp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\header\content_ptr.h">
+    <ClInclude Include="header\ChessClickAction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2174,9 +2171,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Glove.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\CollisionTestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

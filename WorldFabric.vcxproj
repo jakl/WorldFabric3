@@ -210,6 +210,7 @@
     <ClInclude Include="header\Board.h" />
     <ClInclude Include="header\Bridge.h" />
     <ClInclude Include="header\ChessApp.h" />
+    <ClInclude Include="header\ChessClickAction.h" />
     <ClInclude Include="header\Crate.h" />
     <ClInclude Include="header\Defender.h" />
     <ClInclude Include="header\EarthSpikeDefender.h" />

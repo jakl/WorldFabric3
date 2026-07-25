@@ -14,6 +14,12 @@
 #include <map>
 #include <set>
 #include <Glove.h>
+#include <Rook.h>
+#include <Pawn.h>
+#include <King.h>
+#include <Queen.h>
+#include <Bishop.h>
+#include <Knight.h>
 
 namespace Chess {
 

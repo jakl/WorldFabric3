@@ -18,12 +18,13 @@ namespace Chess {
 class Piece : public WorldObject {
 public:
 
-	std::string model_name = "pawn_white";
+	std::string model_name;
 	enum TYPE { pawn, rook, knight, bishop, king, queen };
-	TYPE type = TYPE::pawn;
-	bool is_white = true;
+	TYPE type;
+	bool is_white;
 
-	Piece(const glm::vec3& p, const std::string& model_name_set);
+	Piece(const glm::vec3& position, const std::string& model_name, const TYPE& type, bool is_white)
+		: WorldObject(position), model_name(model_name), type(type), is_white(is_white) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions
@@ -33,14 +34,10 @@ public:
 	//Functions used on observables or on read objects need to be const
 	void print() const override;
 
-	Piece() {} // WorldObject's need a default constructor to make an object to deserialize into
+	Piece() = default; // WorldObject's need a default constructor to make an object to deserialize into
 	virtual ~Piece() = default; // Force to be polymorphic just in case
 
-	//This needs to be in every WorldObject to deduce types for serialziation templates from polymorphism
-	// Just change the template parameter to match your class
-	int getTypeId(Registry* r) const {
-		return r->getIdForType<Piece>();
-	}
+	virtual bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const = 0;
 };
 
 
@@ -62,10 +59,6 @@ public:
 	void destroyed() override;
 
 	void receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) override;
-};
-
-auto static getStructure(Piece& obj) {
-	return std::tie(obj.position, obj.model_name, obj.type, obj.is_white);
 };
 
 

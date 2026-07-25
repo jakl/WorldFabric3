@@ -26,25 +26,23 @@ namespace Chess {
 
 		// Initialize all the chess pieces
 		for (int i = 0; i < 8; i++) {
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i - 3.5, 0, -2.5), "pawn_black")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i - 3.5, 0, 2.5), "pawn_white")), time);
+			create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), "pawn_black", false)), time);
+			create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), "pawn_white", true)), time);
 		}
 		for (int i = 0; i < 2; i++) {
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 5 - 2.5, 0, -3.5), "knight_black")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 5 - 2.5, 0, 3.5), "knight_white")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 7 - 3.5, 0, -3.5), "rook_black")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 7 - 3.5, 0, 3.5), "rook_white")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 3 - 1.5, 0, -3.5), "bishop_black")), time);
-			create(std::shared_ptr<Piece>(new Piece(glm::vec3(i * 3 - 1.5, 0, 3.5), "bishop_white")), time);
+			create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), "knight_black", false)), time);
+			create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), "knight_white", true)), time);
+			create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), "rook_black", false)), time);
+			create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), "rook_white", true)), time);
+			create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), "bishop_black", false)), time);
+			create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), "bishop_white", true)), time);
 		}
-
-		//Make instances of the black royalty
-		create(std::shared_ptr<Piece>(new Piece(glm::vec3(.5, 0, -3.5), "king_black")), time);
-		create(std::shared_ptr<Piece>(new Piece(glm::vec3(-.5, 0, -3.5), "queen_black")), time);
-		//Make instances of the white royalty
-		create(std::shared_ptr<Piece>(new Piece(glm::vec3(.5, 0, 3.5), "king_white")), time);
-		create(std::shared_ptr<Piece>(new Piece(glm::vec3(-.5, 0, 3.5), "queen_white")), time);
-		// This is this player's hand (the hosting aka first player)
+		create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), "king_black", false)), time);
+		create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), "king_white", true)), time);
+		create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), "queen_black", false)), time);
+		create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), "queen_white", true)), time);
+		 
+		//This is this player's hand (the hosting aka first player)
 		glove_white_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove")), time);
 	}
 

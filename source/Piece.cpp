@@ -8,26 +8,8 @@
 
 namespace Chess {
 
-Piece::Piece(const glm::vec3& p, const std::string& model_name_set) {
-	position = p;
-	model_name = model_name_set;
-
-	std::istringstream stream(model_name_set);
-	std::string delimited;
-	while (std::getline(stream, delimited, '_')) {
-		if ("white"  == delimited) is_white = true;
-		if ("black"  == delimited) is_white = false;
-		if ("pawn"   == delimited) type = TYPE::pawn;
-		if ("rook"   == delimited) type = TYPE::rook;
-		if ("knight" == delimited) type = TYPE::knight;
-		if ("bishop" == delimited) type = TYPE::bishop;
-		if ("king"   == delimited) type = TYPE::king;
-		if ("queen"  == delimited) type = TYPE::queen;
-	}
-}
-
 void Piece::setPosition(const glm::vec3& p) {
-	if (fabs(p.x) < 3.8 && fabs(p.z) < 3.8) {
+	if (fabs(p.x) < 3.8 && fabs(p.z) < 3.8 && isValidMove(glm::vec2(position.x, position.z), glm::vec2(p.x, p.z))) {
 		position = p;
 	}
 }

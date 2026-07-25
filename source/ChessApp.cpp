@@ -66,8 +66,18 @@ namespace Chess {
 	void ChessApp::registerClassesAndMethods() {
 		WorldPlugin* world = getTool<WorldPlugin>();
 
-		world->registerClass<Piece, PieceView>("Piece");
-		world->registerMethod(&Piece::setPosition, "setPosition");
+		world->registerClass<Rook, PieceView>("Rook");
+		world->registerMethod(&Rook::setPosition, "setPosition");
+		world->registerClass<Pawn, PieceView>("Pawn");
+		world->registerMethod(&Pawn::setPosition, "setPosition");
+		world->registerClass<Queen, PieceView>("Queen");
+		world->registerMethod(&Queen::setPosition, "setPosition");
+		world->registerClass<King, PieceView>("King");
+		world->registerMethod(&King::setPosition, "setPosition");
+		world->registerClass<Bishop, PieceView>("Bishop");
+		world->registerMethod(&Bishop::setPosition, "setPosition");
+		world->registerClass<Knight, PieceView>("Knight");
+		world->registerMethod(&Knight::setPosition, "setPosition");
 		world->registerClass<Board, BoardView>("Board");
 		world->registerMethod(&Board::init, "init");
 		world->registerMethod(&Board::createBlackGlove, "createBlackGlove");

@@ -34,7 +34,7 @@ namespace Chess {
 		Board(const glm::vec3& p, const std::string& model_name_set);
 		void init();
 
-		std::vector<std::vector<int64_t>> grid;
+		std::vector<int64_t> pieces_ids;
 		void destroy();
 
 		//Functions used on observables or on read objects need to be const
@@ -79,7 +79,7 @@ namespace Chess {
 	};
 
 	auto static getStructure(Board& obj) {
-		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id);
+		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.pieces_ids);
 	}
 
 

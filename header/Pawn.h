@@ -8,9 +8,8 @@ namespace Chess {
     {
     public:
 
-        Pawn(const glm::vec3& position, const std::string& model_name, bool is_white)
-            : Piece(position, model_name, TYPE::pawn, is_white) {
-        };
+        Pawn(const glm::vec3& position, bool is_white)
+            : Piece(position, is_white, "pawn" + is_white ? "_white" : "_black") {};
 
         Pawn() = default;
 

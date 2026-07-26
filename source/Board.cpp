@@ -26,21 +26,21 @@ namespace Chess {
 
 		// Initialize all the chess pieces
 		for (int i = 0; i < 8; i++) {
-			create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), "pawn_black", false)), time);
-			create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), "pawn_white", true)), time);
+			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), false)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), true)), time));
 		}
 		for (int i = 0; i < 2; i++) {
-			create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), "knight_black", false)), time);
-			create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), "knight_white", true)), time);
-			create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), "rook_black", false)), time);
-			create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), "rook_white", true)), time);
-			create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), "bishop_black", false)), time);
-			create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), "bishop_white", true)), time);
+			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), false)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), true)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), false)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), true)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), false)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), true)), time));
 		}
-		create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), "king_black", false)), time);
-		create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), "king_white", true)), time);
-		create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), "queen_black", false)), time);
-		create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), "queen_white", true)), time);
+		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), false)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), true)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), false)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), true)), time));
 		 
 		//This is this player's hand (the hosting aka first player)
 		glove_white_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove")), time);
@@ -109,23 +109,21 @@ namespace Chess {
 			std::shared_ptr<const Piece> piece = world->observe<Piece>("chess", action->held_piece);
 			if(piece){
 				glowUpHeldPiece(piece);
-
+			}
+			if(action->clicked || !piece){
 				// Place pieces in the middle of squares
 				glm::vec3 mouse_piece_pos = mouse_on_board_pos;
 				mouse_piece_pos.x = std::round(mouse_piece_pos.x + .5f) - .5f;
 				mouse_piece_pos.z = std::round(mouse_piece_pos.z + .5f) - .5f;
 
 				// Only send the network event if the position is different
-				if (piece->position.x != mouse_piece_pos.x || piece->position.z != mouse_piece_pos.z) {
+				if (piece && piece->position.x != mouse_piece_pos.x || piece->position.z != mouse_piece_pos.z) {
 					world->queue("chess", piece->id, &Piece::setPosition, mouse_piece_pos);
 				}
-			}
-			if(action->clicked || !piece){
 				action->next_held_piece = -1 ; // drop piece
 			}
 		}
 		else {
-
 			ParticlePlugin* particles = getTool<ParticlePlugin>();
 			particles->setPose(particle_id, glm::mat4(0));
 		}

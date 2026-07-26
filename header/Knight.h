@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Knight(const glm::vec3& position, const std::string& model_name, bool is_white)
-            : Piece(position, model_name, TYPE::knight, is_white) {};
+        Knight(const glm::vec3& position, bool is_white)
+            : Piece(position, is_white, "knight" + is_white ? "_white" : "_black") {};
 
         Knight() = default;
 
@@ -21,7 +21,8 @@ namespace Chess {
         }
 
         bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const override {
-            if (source_square.x == destination_square.x || source_square.y == destination_square.y) {
+            if (fabs(source_square.x - destination_square.x) == 2 && fabs(source_square.y - destination_square.y) == 1 
+                || fabs(source_square.x - destination_square.x) == 1 && fabs(source_square.y - destination_square.y) == 2) {
                 return true;
             }
             return false;

@@ -52,7 +52,7 @@ namespace Chess {
 		}
 	}
 
-	void BoardView::created(const Board& observation) {
+	void BoardView::created(std::shared_ptr<const Board>& observation) {
 		ScenePlugin* scene = getTool<ScenePlugin>();
 		ActionMap* action_map = getTool<ActionMap>();
 		ParticlePlugin* particles = getTool<ParticlePlugin>();
@@ -60,10 +60,10 @@ namespace Chess {
 		last_observation = observation;
 
 		pose = glm::mat4(1.0f);
-		pose = glm::translate(pose, observation.position);
-		scene_id = scene->createInstance(observation.model_name, pose);
+		pose = glm::translate(pose, observation->position);
+		scene_id = scene->createInstance(observation->model_name, pose);
 
-		std::shared_ptr<GLTF> model = scene->getModelController(observation.model_name);
+		std::shared_ptr<GLTF> model = scene->getModelController(observation->model_name);
 		//Note: multiplying pose by AABB corners only works to prdouce another correct AABB here when pose contains only translation and scale
 		std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0,pose * glm::vec4(model->min,1), pose * glm::vec4(model->max, 1),this)) ;
 		trigger_id = action_map->addTrigger(trigger);
@@ -72,7 +72,7 @@ namespace Chess {
 	}
 
 	//Update is called when an observation is made of an object that was also observed last frame on this same view
-	void BoardView::updated(const Board& observation) {
+	void BoardView::updated(std::shared_ptr<const Board>& observation) {
 		last_observation = observation ;
 	}
 
@@ -94,14 +94,14 @@ namespace Chess {
 		glm::vec3 mouse_on_board_pos = action->origin + action->direction * board_t;
 
 		if (world->amHosting()) {
-			world->queue("chess", last_observation.glove_white_id, &Glove::setPosition, mouse_on_board_pos);
+			world->queue("chess", last_observation->glove_white_id, &Glove::setPosition, mouse_on_board_pos);
 		}
 		else {
-			if (last_observation.glove_black_id == -1) {
-				world->queue("chess", last_observation.id, &Board::createBlackGlove);
+			if (last_observation->glove_black_id == -1) {
+				world->queue("chess", last_observation->id, &Board::createBlackGlove);
 			}
 			else {
-				world->queue("chess", last_observation.glove_black_id, &Glove::setPosition, mouse_on_board_pos);
+				world->queue("chess", last_observation->glove_black_id, &Glove::setPosition, mouse_on_board_pos);
 			}
 		}
 

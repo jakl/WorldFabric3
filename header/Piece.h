@@ -46,13 +46,13 @@ public:
 	int scene_id = -1;
 	int trigger_id = -1;
 	glm::mat4 pose;
-	Piece last_observation;
+	std::shared_ptr<const Piece> last_observation;
 
 	//created is called when an objectis observed that ws no observed last time view was called on the world
-	void created(const Piece& observation) override;
+	void created(std::shared_ptr<const Piece>& observation) override;
 
 	//Update is called when an observation is made of an object that was also observed last frame on this same view
-	void updated(const Piece& observation) override;
+	void updated(std::shared_ptr<const Piece>& observation) override;
 
 	//Destroyed is called when an observation that was present in the last observation is no longer observed
 	//This view will be deleted immediately after this call (it's destructor will be called after this)

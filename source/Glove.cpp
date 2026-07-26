@@ -26,21 +26,21 @@ namespace Chess {
 		printf("Glove at %f, %f, %f\n", position.x, position.y, position.z);
 	}
 
-	void GloveView::created(const Glove& observation) {
+	void GloveView::created(std::shared_ptr<const Glove>& observation) {
 		ScenePlugin* scene = getTool<ScenePlugin>();
 
-		id = observation.id;
+		id = observation->id;
 		pose = glm::mat4(1.0f);
-		pose = glm::translate(pose, observation.position);
-		scene_id = scene->createInstance(observation.model_name, pose);
+		pose = glm::translate(pose, observation->position);
+		scene_id = scene->createInstance(observation->model_name, pose);
 	}
 
 	//Update is called when an observation is made of an object that was also observed last frame on this same view
-	void GloveView::updated(const Glove& observation) {
+	void GloveView::updated(std::shared_ptr<const Glove>& observation) {
 		ScenePlugin* scene = getTool<ScenePlugin>();
 		pose = glm::mat4(1.0f);
-		pose = glm::translate(pose, observation.position);
-		if (!observation.is_white) {
+		pose = glm::translate(pose, observation->position);
+		if (!observation->is_white) {
 			pose = glm::rotate(pose, 3.14f, glm::vec3(0, 1, 0));
 		}
 		scene->setPose(scene_id, pose);

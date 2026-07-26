@@ -56,7 +56,7 @@ namespace Chess {
 
 	class BoardView : public ObjectView<Board>, public virtual ActionReceiver<ChessMouseAction> {
 	public:
-		Board last_observation;
+		std::shared_ptr<const Board> last_observation;
 		int scene_id = -1;
 		int trigger_id = -1;
 		int particle_id = -1 ;
@@ -64,10 +64,10 @@ namespace Chess {
 		
 
 		//created is called when an objectis observed that ws no observed last time view was called on the world
-		void created(const Board& observation) override;
+		void created(std::shared_ptr<const Board>& observation) override;
 
 		//Update is called when an observation is made of an object that was also observed last frame on this same view
-		void updated(const Board& observation) override;
+		void updated(std::shared_ptr<const Board>& observation) override;
 
 		//Destroyed is called when an observation that was present in the last observation is no longer observed
 		//This view will be deleted immediately after this call (it's destructor will be called after this)

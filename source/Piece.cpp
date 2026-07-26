@@ -23,18 +23,18 @@ void Piece::print() const {
 }
 
 // This is mandated by the engine
-void PieceView::created(const Piece& observation) {
+void PieceView::created(std::shared_ptr<const Piece>& observation) {
 	ScenePlugin* scene = getTool<ScenePlugin>();
 	ActionMap* action_map = getTool<ActionMap>();
 
 	last_observation = observation;
 
 	pose = glm::mat4(1.0f);
-	pose = glm::translate(pose, observation.position);
-	scene_id = scene->createInstance(observation.model_name, pose);
+	pose = glm::translate(pose, observation->position);
+	scene_id = scene->createInstance(observation->model_name, pose);
 	//traceables[scene_id] = observation.id;
 	
-	std::shared_ptr<GLTF> model = scene->getModelController(observation.model_name);
+	std::shared_ptr<GLTF> model = scene->getModelController(observation->model_name);
 	//Note: multiplying pose by AABB corners only works to prdouce another correct AABB here when pose contains only translation and scale
 	std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0, pose * glm::vec4(model->min, 1), pose * glm::vec4(model->max, 1), this));
 	trigger_id = action_map->addTrigger(trigger);
@@ -42,17 +42,17 @@ void PieceView::created(const Piece& observation) {
 
 // This is mandated by the engine
 //Update is called when an observation is made of an object that was also observed last frame on this same view
-void PieceView::updated(const Piece& observation) {
+void PieceView::updated(std::shared_ptr<const Piece>& observation) {
 	ScenePlugin* scene = getTool<ScenePlugin>();
 	ActionMap* action_map = getTool<ActionMap>();
 
 	last_observation = observation;
 
 	pose = glm::mat4(1.0f);
-	pose = glm::translate(pose, observation.position);
+	pose = glm::translate(pose, observation->position);
 	scene->setPose(scene_id, pose);
 
-	std::shared_ptr<GLTF> model = scene->getModelController(observation.model_name);
+	std::shared_ptr<GLTF> model = scene->getModelController(observation->model_name);
 	action_map->moveTrigger(trigger_id, pose * glm::vec4(model->min, 1), pose * glm::vec4(model->max, 1));
 
 }
@@ -72,7 +72,7 @@ void PieceView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::sh
 		float t = ChessApp::raytrace(action->origin, action->direction,scene_id,pose) ;
 		if(t > 0){// Only act if the actual model was hit and not just he bounding box
 			// recieveAction is called in ray order, so setting this will stop others from getting into the first if
-			action->next_held_piece = last_observation.id ; 
+			action->next_held_piece = last_observation->id ;
 		}
 	}
 }

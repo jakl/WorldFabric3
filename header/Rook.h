@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Rook(const glm::vec3& position, bool is_white)
-            : Piece(position, is_white, "rook" + is_white ? "_white" : "_black") {};
+        Rook(const glm::vec3& position, Piece::COLOR color, int64_t board_id)
+            : Piece(position, color, std::string("rook") + (color ? "_white" : "_black"), board_id) {};
 
         Rook() = default;
 
@@ -21,15 +21,12 @@ namespace Chess {
         }
 
         bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const override {
-            if (source_square.x == destination_square.x || source_square.y == destination_square.y) {
-                return true;
-            }
-            return false;
+            return source_square.x == destination_square.x || source_square.y == destination_square.y;
         }
     };
 
     auto static getStructure(Rook& obj) {
-        return std::tie(obj.position, obj.model_name, obj.type, obj.is_white);
+        return std::tie(obj.position, obj.model_name, obj.color);
     };
 
 }

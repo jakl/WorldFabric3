@@ -18,18 +18,13 @@ namespace Chess {
 class Piece : public WorldObject {
 public:
 
-	bool is_white;
+	enum COLOR { black, white }; // never change the order of these lol!
 	std::string model_name;
-	enum TYPE { pawn, rook, knight, bishop, king, queen };
-	TYPE type;
+	int64_t board_id;
+	COLOR color;
 
-	Piece(const glm::vec3& position, bool is_white)
-		: WorldObject(position), is_white(is_white) {
-	};
-
-	Piece(const glm::vec3& position, bool is_white, const std::string& model_name)
-		: WorldObject(position), is_white(is_white), model_name(model_name) {
-	};
+	Piece(const glm::vec3& position, COLOR color, const std::string& model_name, int64_t board_id)
+		: WorldObject(position), color(color), model_name(model_name), board_id(board_id) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions

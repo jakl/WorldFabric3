@@ -9,10 +9,11 @@
 namespace Chess {
 
 void Piece::setPosition(const glm::vec3& p) {
-	//queue
-
+	// Piece is on the board, and follows chess rules
 	if (fabs(p.x) < 3.8 && fabs(p.z) < 3.8 && isValidMove(glm::vec2(position.x, position.z), glm::vec2(p.x, p.z))) {
 		position = p;
+
+		queue(board_id, time, &Board::takePiece, id, p);
 	}
 }
 

@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Rook(const glm::vec3& position, Piece::COLOR color, int64_t board_id)
-            : Piece(position, color, std::string("rook") + (color ? "_white" : "_black"), board_id) {};
+        Rook(const glm::vec3& position, Piece::COLOR color)
+            : Piece(position, color, std::string("rook") + (color ? "_white" : "_black")) {};
 
         Rook() = default;
 

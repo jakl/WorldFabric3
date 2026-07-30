@@ -27,21 +27,21 @@ namespace Chess {
 
 		// Initialize all the chess pieces
 		for (int i = 0; i < 8; i++) {
-			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), Piece::black, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), Piece::white, id)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), Piece::black)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), Piece::white)), time));
 		}
 		for (int i = 0; i < 2; i++) {
-			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), Piece::black, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), Piece::white, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), Piece::black, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), Piece::white, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black, id)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white, id)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), Piece::black)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), Piece::white)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), Piece::black)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), Piece::white)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black)), time));
+			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white)), time));
 		}
-		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), Piece::black, id)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), Piece::white, id)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), Piece::black, id)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), Piece::white, id)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), Piece::black)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), Piece::white)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), Piece::black)), time));
+		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), Piece::white)), time));
 		 
 		//This is this player's hand (the hosting aka first player)
 		glove_white_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove")), time);

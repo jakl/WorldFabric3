@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Bishop(const glm::vec3& position, Piece::COLOR color, int64_t board_id)
-            : Piece(position, color, std::string("bishop") + (color ? "_white" : "_black"), board_id) {};
+        Bishop(const glm::vec3& position, Piece::COLOR color)
+            : Piece(position, color, std::string("bishop") + (color ? "_white" : "_black")) {};
 
         Bishop() = default;
 

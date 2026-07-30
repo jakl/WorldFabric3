@@ -24,8 +24,8 @@ public:
 	int64_t board_id;
 	COLOR color;
 
-	Piece(const glm::vec3& position, COLOR color, const std::string& model_name, int64_t board_id)
-		: WorldObject(position), color(color), model_name(model_name), board_id(board_id) {};
+	Piece(const glm::vec3& position, COLOR color, const std::string& model_name)
+		: WorldObject(position), color(color), model_name(model_name) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions

@@ -20,8 +20,9 @@ namespace Chess {
             return r->getIdForType<Rook>();
         }
 
-        bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const override {
-            return source_square.x == destination_square.x || source_square.y == destination_square.y;
+        bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const override {
+            if (!Piece::isValidMove(source_square, destination_square)) { return false; }
+            return source_square.x == destination_square.x || source_square.z == destination_square.z;
         }
     };
 

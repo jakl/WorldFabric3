@@ -12,6 +12,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <print>
 
 namespace Chess {
 
@@ -37,7 +38,7 @@ public:
 	Piece() = default; // WorldObject's need a default constructor to make an object to deserialize into
 	virtual ~Piece() = default; // Force to be polymorphic just in case
 
-	virtual bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const = 0;
+	virtual bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const = 0;
 };
 
 

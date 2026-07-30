@@ -1554,6 +1554,24 @@
     <ClInclude Include="header\ChessClickAction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="header\Bishop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\King.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Knight.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Pawn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Queen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Rook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\doxyfile" />
@@ -2170,7 +2188,7 @@
     <ClCompile Include="source\Piece.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Glove.cpp">
+    <ClCompile Include="source\Glove.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -20,9 +20,10 @@ namespace Chess {
             return r->getIdForType<Pawn>();
         }
 
-        bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const override {
-            bool moved_towards_black = source_square.y - destination_square.y == 1;
-            bool moved_one_square = fabs(source_square.y - destination_square.y) == 1;
+        bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const override {
+            if (!Piece::isValidMove(source_square, destination_square)) { return false; }
+            bool moved_towards_black = source_square.z - destination_square.z == 1;
+            bool moved_one_square = fabs(source_square.z - destination_square.z) == 1;
             bool is_white = !!color;
             return is_white == moved_towards_black && source_square.x == destination_square.x && moved_one_square;
         }

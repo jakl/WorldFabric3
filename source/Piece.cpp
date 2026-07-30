@@ -4,17 +4,17 @@
 #include "PanelPlugin.h"
 #include "AudioPlugin.h"
 #include "ChessApp.h"
+#include <print>
 
 
 namespace Chess {
 
 void Piece::setPosition(const glm::vec3& p) {
-	// Piece is on the board, and follows chess rules
-	if (fabs(p.x) < 3.8 && fabs(p.z) < 3.8 && isValidMove(glm::vec2(position.x, position.z), glm::vec2(p.x, p.z))) {
-		position = p;
+	position = p;
+}
 
-		queue(board_id, time, &Board::takePiece, id, p);
-	}
+bool Piece::isValidMove(const glm::vec3& source_p, const glm::vec3& dest_p) const {
+	return fabs(dest_p.x) < 3.8 && fabs(dest_p.z) < 3.8; // Destination is on the board
 }
 
 void Piece::destroy() {

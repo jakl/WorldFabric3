@@ -45,7 +45,7 @@ namespace Chess {
 
 		void createBlackGlove();
 
-		void takePiece(const int64_t& taker_piece_id, const glm::vec3& square);
+		void takePiece(const glm::vec3& square);
 
 		//This needs to be in every WorldObject to deduce types for serialziation templates from polymorphism
 		// Just change the template parameter to match your class

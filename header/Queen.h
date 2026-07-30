@@ -20,9 +20,10 @@ namespace Chess {
             return r->getIdForType<Queen>();
         }
 
-        bool isValidMove(const glm::vec2& source_square, const glm::vec2& destination_square) const override {
-            bool moves_like_rook = source_square.x == destination_square.x || source_square.y == destination_square.y;
-            bool moves_like_bishop = fabs(source_square.x - destination_square.x) - fabs(source_square.y - destination_square.y) == 0;
+        bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const override {
+            if (!Piece::isValidMove(source_square, destination_square)) { return false; }
+            bool moves_like_rook = source_square.x == destination_square.x || source_square.z == destination_square.z;
+            bool moves_like_bishop = fabs(source_square.x - destination_square.x) - fabs(source_square.z - destination_square.z) == 0;
             return moves_like_rook || moves_like_bishop;
         }
     };

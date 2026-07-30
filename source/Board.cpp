@@ -5,6 +5,7 @@
 #include "AudioPlugin.h"
 #include "ChessApp.h"
 #include "ParticlePlugin.h"
+#include <print>
 
 namespace Chess {
 
@@ -52,12 +53,14 @@ namespace Chess {
 		}
 	}
 
-	void Board::takePiece(const int64_t& taker_piece_id, const glm::vec3& square) {
+	void Board::takePiece(const glm::vec3& square) {
 		for (int64_t each_piece_id : pieces_ids) {
-			std::shared_ptr<const Piece> each_piece = std::dynamic_pointer_cast<const Piece>(read(each_piece_id));
-			if (each_piece && each_piece_id != taker_piece_id && square == each_piece->position) {
+			std::shared_ptr<const WorldObject> world_object = read(each_piece_id);
+			if (!world_object) { continue; }
+
+			std::shared_ptr<const Piece> each_piece = std::dynamic_pointer_cast<const Piece>(world_object);
+			if (each_piece && square == each_piece->position) {
 				queue(each_piece_id, time, &Piece::destroy);
-				return;
 			}
 		}
 	}
@@ -102,6 +105,7 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		float board_t = ChessApp::raytrace(action->origin, action->direction, scene_id, pose);
 		glm::vec3 mouse_on_board_pos = action->origin + action->direction * board_t;
+		mouse_on_board_pos.y = 0;
 
 		if (world->amHosting()) {
 			world->queue("chess", last_observation->glove_white_id, &Glove::setPosition, mouse_on_board_pos);
@@ -122,13 +126,17 @@ namespace Chess {
 			}
 			if(action->clicked || !piece){
 				// Place pieces in the middle of squares
-				glm::vec3 mouse_piece_pos = mouse_on_board_pos;
-				mouse_piece_pos.x = std::round(mouse_piece_pos.x + .5f) - .5f;
-				mouse_piece_pos.z = std::round(mouse_piece_pos.z + .5f) - .5f;
+				glm::vec3 move_piece_to_p = mouse_on_board_pos;
+				move_piece_to_p.x = std::round(move_piece_to_p.x + .5f) - .5f;
+				move_piece_to_p.z = std::round(move_piece_to_p.z + .5f) - .5f;
 
 				// Only send the network event if the position is different
-				if (piece && piece->position.x != mouse_piece_pos.x || piece->position.z != mouse_piece_pos.z) {
-					world->queue("chess", piece->id, &Piece::setPosition, mouse_piece_pos);
+				if (piece && piece->position.x != move_piece_to_p.x || piece->position.z != move_piece_to_p.z) {
+					std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
+					if (piece->isValidMove(piece->position, move_piece_to_p)) {
+						world->queue("chess", board->id, &Board::takePiece, move_piece_to_p);
+						world->queue("chess", piece->id, &Piece::setPosition, move_piece_to_p);
+					}
 				}
 				action->next_held_piece = -1 ; // drop piece
 			}

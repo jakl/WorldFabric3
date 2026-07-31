@@ -81,7 +81,7 @@ namespace Chess {
 		world->registerClass<Board, BoardView>("Board");
 		world->registerMethod(&Board::init, "init");
 		world->registerMethod(&Board::createBlackGlove, "createBlackGlove");
-		world->registerMethod(&Board::takePiece, "takePiece");
+		world->registerMethod(&Board::setPiecePosition, "setPiecePosition");
 		world->registerClass<Glove, GloveView>("Glove");
 		world->registerMethod(&Glove::setPosition, "setPosition");
 		world->registerMethod(&Piece::destroy, "destroy");

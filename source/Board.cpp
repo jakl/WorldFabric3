@@ -23,45 +23,51 @@ namespace Chess {
 	}
 
 	void Board::init() {
-		WorldPlugin* world = getTool<WorldPlugin>();
-
 		// Initialize all the chess pieces
 		for (int i = 0; i < 8; i++) {
-			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, -2.5), Piece::black)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Pawn>(new Pawn(glm::vec3(i - 3.5, 0, 2.5), Piece::white)), time));
+			addPiece<Pawn>(glm::vec3(i - 3.5, 0, -2.5), Piece::black);
+			addPiece<Pawn>(glm::vec3(i - 3.5, 0, 2.5), Piece::white);
 		}
 		for (int i = 0; i < 2; i++) {
-			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, -3.5), Piece::black)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Knight>(new Knight(glm::vec3(i * 5 - 2.5, 0, 3.5), Piece::white)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, -3.5), Piece::black)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Rook>(new Rook(glm::vec3(i * 7 - 3.5, 0, 3.5), Piece::white)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black)), time));
-			pieces_ids.emplace_back(create(std::shared_ptr<Bishop>(new Bishop(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white)), time));
+			addPiece<Knight>(glm::vec3(i * 5 - 2.5, 0, -3.5), Piece::black);
+			addPiece<Knight>(glm::vec3(i * 5 - 2.5, 0, 3.5), Piece::white);
+			addPiece<Rook>(glm::vec3(i * 7 - 3.5, 0, -3.5), Piece::black);
+			addPiece<Rook>(glm::vec3(i * 7 - 3.5, 0, 3.5), Piece::white);
+			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black);
+			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white);
 		}
-		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, -3.5), Piece::black)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<King>(new King(glm::vec3(.5, 0, 3.5), Piece::white)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, -3.5), Piece::black)), time));
-		pieces_ids.emplace_back(create(std::shared_ptr<Queen>(new Queen(glm::vec3(-.5, 0, 3.5), Piece::white)), time));
+		addPiece<King>(glm::vec3(.5, 0, -3.5), Piece::black);
+		addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
+		addPiece<Queen>(glm::vec3(-.5, 0, -3.5), Piece::black);
+		addPiece<Queen>(glm::vec3(-.5, 0, 3.5), Piece::white);
 		 
 		//This is this player's hand (the hosting aka first player)
 		glove_white_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove")), time);
 	}
 
+	template <typename T>
+	void Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
+		pieces_ids.emplace_back(create(std::shared_ptr<T>(new T(p, color)), time));
+		board_of_pieces.emplace(p, pieces_ids.back());
+	}
+
+	void Board::setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p) {
+		// Take/Destroy the piece being captured
+		auto maybe_piece = board_of_pieces.find(new_p);
+		if (maybe_piece != board_of_pieces.end()) {
+			queue(maybe_piece->second, time, &Piece::destroy);
+		}
+
+		// Move the capturer into it's place
+		int64_t piece_id = board_of_pieces.at(old_p);
+		board_of_pieces.erase(old_p);
+		board_of_pieces.erase(new_p);
+		board_of_pieces.emplace(new_p, piece_id);
+	}
+
 	void Board::createBlackGlove() {
 		if (glove_black_id == -1) {
 			glove_black_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove", false)), time);
-		}
-	}
-
-	void Board::takePiece(const glm::vec3& square) {
-		for (int64_t each_piece_id : pieces_ids) {
-			std::shared_ptr<const WorldObject> world_object = read(each_piece_id);
-			if (!world_object) { continue; }
-
-			std::shared_ptr<const Piece> each_piece = std::dynamic_pointer_cast<const Piece>(world_object);
-			if (each_piece && square == each_piece->position) {
-				queue(each_piece_id, time, &Piece::destroy);
-			}
 		}
 	}
 
@@ -134,7 +140,7 @@ namespace Chess {
 				if (piece && piece->position.x != move_piece_to_p.x || piece->position.z != move_piece_to_p.z) {
 					std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
 					if (piece->isValidMove(piece->position, move_piece_to_p)) {
-						world->queue("chess", board->id, &Board::takePiece, move_piece_to_p);
+						world->queue("chess", board->id, &Board::setPiecePosition, piece->position, move_piece_to_p);
 						world->queue("chess", piece->id, &Piece::setPosition, move_piece_to_p);
 					}
 				}

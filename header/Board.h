@@ -1,5 +1,6 @@
 #ifndef _Board_Board_H_
 #define _Board_Board_H_ 1
+#define GLM_ENABLE_EXPERIMENTAL
 
 
 #include "WorldPlugin.h"
@@ -20,6 +21,7 @@
 #include <Queen.h>
 #include <Bishop.h>
 #include <Knight.h>
+#include <glm/gtx/hash.hpp> // Enables std::hash for glm vectors
 
 namespace Chess {
 
@@ -30,11 +32,17 @@ namespace Chess {
 		std::string model_name;
 		int64_t glove_white_id = -1;
 		int64_t glove_black_id = -1;
+		std::vector<int64_t> pieces_ids;
+		std::map < glm::vec3, int64_t, decltype([](glm::vec3 a, glm::vec3 b) {
+			// Need to compare vec3's so the map can be ordered
+			if (a.x != b.x) return a.x < b.x;
+			if (a.y != b.y) return a.y < b.y;
+			return a.z < b.z;
+		}) > board_of_pieces;
 
 		Board(const glm::vec3& p, const std::string& model_name_set);
 		void init();
 
-		std::vector<int64_t> pieces_ids;
 		void destroy();
 
 		//Functions used on observables or on read objects need to be const
@@ -45,7 +53,10 @@ namespace Chess {
 
 		void createBlackGlove();
 
-		void takePiece(const glm::vec3& square);
+		template <typename T>
+		void addPiece(const glm::vec3& p, const Piece::COLOR& color);
+		
+		void setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p);
 
 		//This needs to be in every WorldObject to deduce types for serialziation templates from polymorphism
 		// Just change the template parameter to match your class
@@ -81,7 +92,7 @@ namespace Chess {
 	};
 
 	auto static getStructure(Board& obj) {
-		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.pieces_ids);
+		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.pieces_ids, obj.board_of_pieces);
 	}
 
 

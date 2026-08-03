@@ -133,10 +133,7 @@ namespace Chess {
 		mouse_action->origin = window->window_target->camera_position ;
 		mouse_action->direction = window->getMouseRay() ;
 		mouse_action->clicked = window->mouseDown(1) && !mouse_down_left ;
-		std::lock(world->lock, action_map->lock);
 		action_map->performAction(mouse_action) ;
-		world->lock.unlock();
-		action_map->lock.unlock();
 		mouse_action->held_piece = mouse_action->next_held_piece ;
 		mouse_down_left = window->mouseDown(1) ;
 

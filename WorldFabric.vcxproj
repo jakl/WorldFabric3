@@ -904,9 +904,6 @@
     <ClCompile Include="engine\source\WorldPlugin.cpp" />
     <ClCompile Include="include\glm\detail\glm.cpp" />
     <ClCompile Include="include\stb_vorbis.c" />
-    <ClCompile Include="Narball\source\NarballMain.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\engine\header;$(VULKAN_SDK)/Include;./header;./include;./lib;./dll;.\Narball\header;.\Narball\source</AdditionalIncludeDirectories>
-    </ClCompile>
     <ClCompile Include="Narball\source\Ball.cpp" />
     <ClCompile Include="Narball\source\Nameplate.cpp" />
     <ClCompile Include="Narball\source\NarballMenu.cpp" />
@@ -917,7 +914,6 @@
     <ClCompile Include="source\BallThrowApp.cpp" />
     <ClCompile Include="source\CollisionTestApp.cpp" />
     <ClCompile Include="source\ConstraintTestApp.cpp" />
-    <ClCompile Include="source\Bishop.cpp" />
     <ClCompile Include="source\Board.cpp" />
     <ClCompile Include="source\ChessApp.cpp" />
     <ClCompile Include="source\Glove.cpp" />

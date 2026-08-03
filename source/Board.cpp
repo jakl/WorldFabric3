@@ -18,11 +18,8 @@ namespace Chess {
 		destroyed = true;
 	}
 
-	void Board::print() const {
-		printf("Board at %f, %f, %f\n", position.x, position.y, position.z);
-	}
-
 	void Board::init() {
+		WorldPlugin* world = getTool<WorldPlugin>();
 		// Initialize all the chess pieces
 		for (int i = 0; i < 8; i++) {
 			addPiece<Pawn>(glm::vec3(i - 3.5, 0, -2.5), Piece::black);
@@ -40,21 +37,33 @@ namespace Chess {
 		addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
 		addPiece<Queen>(glm::vec3(-.5, 0, -3.5), Piece::black);
 		addPiece<Queen>(glm::vec3(-.5, 0, 3.5), Piece::white);
-		 
+
 		//This is this player's hand (the hosting aka first player)
 		glove_white_id = create(std::shared_ptr<Glove>(new Glove(glm::vec3(.5, 0, 3.5), "glove")), time);
+
+		world->queue("chess", id, &Board::printEvent);
+	}
+
+	void Board::printEvent() {
+		WorldPlugin* world = getTool<WorldPlugin>();
+		std::println("The board and all the pieces \n {}", *this);
+
+		for (const auto& piece : board_of_pieces) {
+			const std::shared_ptr<const Piece> p = world->observe<Piece>("chess", piece.second);
+			std::println("{}", *p);
+		}
 	}
 
 	template <typename T>
 	void Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
-		pieces_ids.emplace_back(create(std::shared_ptr<T>(new T(p, color)), time));
-		board_of_pieces.emplace(p, pieces_ids.back());
+		board_of_pieces.emplace(p, create(std::shared_ptr<T>(new T(p, id, color)), time));
 	}
 
 	void Board::setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p) {
 		// Take/Destroy the piece being captured
 		auto maybe_piece = board_of_pieces.find(new_p);
 		if (maybe_piece != board_of_pieces.end()) {
+			std::println("Piece at {} is taking {} at {}", old_p, maybe_piece->second, new_p);
 			queue(maybe_piece->second, time, &Piece::destroy);
 		}
 
@@ -63,6 +72,8 @@ namespace Chess {
 		board_of_pieces.erase(old_p);
 		board_of_pieces.erase(new_p);
 		board_of_pieces.emplace(new_p, piece_id);
+		queue(piece_id, time, &Piece::setPosition, new_p);
+		std::println("Moving {} from {} to {}", piece_id, old_p, new_p);
 	}
 
 	void Board::createBlackGlove() {
@@ -84,15 +95,15 @@ namespace Chess {
 
 		std::shared_ptr<GLTF> model = scene->getModelController(observation->model_name);
 		//Note: multiplying pose by AABB corners only works to prdouce another correct AABB here when pose contains only translation and scale
-		std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0,pose * glm::vec4(model->min,1), pose * glm::vec4(model->max, 1),this)) ;
+		std::shared_ptr<ActionTrigger> trigger = std::shared_ptr<ActionTrigger>(new ActionTrigger(0, pose * glm::vec4(model->min, 1), pose * glm::vec4(model->max, 1), this));
 		trigger_id = action_map->addTrigger(trigger);
 
-		particle_id = particles->createParticle(0) ;
+		particle_id = particles->createParticle(0);
 	}
 
 	//Update is called when an observation is made of an object that was also observed last frame on this same view
 	void BoardView::updated(std::shared_ptr<const Board>& observation) {
-		last_observation = observation ;
+		last_observation = observation;
 	}
 
 	//Destroyed is called when an observation that was present in the last observation is no longer observed
@@ -107,7 +118,7 @@ namespace Chess {
 		particles->destroyParticle(particle_id);
 	}
 
-	void BoardView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger){
+	void BoardView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		float board_t = ChessApp::raytrace(action->origin, action->direction, scene_id, pose);
 		glm::vec3 mouse_on_board_pos = action->origin + action->direction * board_t;
@@ -127,24 +138,21 @@ namespace Chess {
 
 		if (action->held_piece != -1) {
 			std::shared_ptr<const Piece> piece = world->observe<Piece>("chess", action->held_piece);
-			if(piece){
+			if (piece) {
 				glowUpHeldPiece(piece);
 			}
-			if(action->clicked || !piece){
+			if (action->clicked || !piece) {
 				// Place pieces in the middle of squares
 				glm::vec3 move_piece_to_p = mouse_on_board_pos;
 				move_piece_to_p.x = std::round(move_piece_to_p.x + .5f) - .5f;
 				move_piece_to_p.z = std::round(move_piece_to_p.z + .5f) - .5f;
 
 				// Only send the network event if the position is different
-				if (piece && piece->position.x != move_piece_to_p.x || piece->position.z != move_piece_to_p.z) {
-					std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
-					if (piece->isValidMove(piece->position, move_piece_to_p)) {
-						world->queue("chess", board->id, &Board::setPiecePosition, piece->position, move_piece_to_p);
-						world->queue("chess", piece->id, &Piece::setPosition, move_piece_to_p);
-					}
+				std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
+				if (piece && (piece->position.x != move_piece_to_p.x || piece->position.z != move_piece_to_p.z) && piece->isValidMove(move_piece_to_p)) {
+					world->queue("chess", board->id, &Board::setPiecePosition, piece->position, move_piece_to_p);
 				}
-				action->next_held_piece = -1 ; // drop piece
+				action->next_held_piece = -1; // drop piece
 			}
 		}
 		else {

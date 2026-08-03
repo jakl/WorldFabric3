@@ -32,13 +32,12 @@ namespace Chess {
 		std::string model_name;
 		int64_t glove_white_id = -1;
 		int64_t glove_black_id = -1;
-		std::vector<int64_t> pieces_ids;
-		std::map < glm::vec3, int64_t, decltype([](glm::vec3 a, glm::vec3 b) {
+		std::map<glm::vec3, int64_t, decltype([](glm::vec3 a, glm::vec3 b) {
 			// Need to compare vec3's so the map can be ordered
 			if (a.x != b.x) return a.x < b.x;
 			if (a.y != b.y) return a.y < b.y;
 			return a.z < b.z;
-		}) > board_of_pieces;
+		})> board_of_pieces;
 
 		Board(const glm::vec3& p, const std::string& model_name_set);
 		void init();
@@ -46,7 +45,8 @@ namespace Chess {
 		void destroy();
 
 		//Functions used on observables or on read objects need to be const
-		void print() const override;
+		void print() const override {}
+		void printEvent();
 
 		Board() {} // WorldObject's need a default constructor to make an object to deserialize into
 		virtual ~Board() = default; // Force to be polymorphic just in case
@@ -92,10 +92,21 @@ namespace Chess {
 	};
 
 	auto static getStructure(Board& obj) {
-		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.pieces_ids, obj.board_of_pieces);
+		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.board_of_pieces);
 	}
 
 
 } // end Board name space
+
+template <>
+struct std::formatter<Chess::Board> {
+	auto format(const Chess::Board& p, std::format_context& ctx) const {
+		// This is the only line that matters, the rest is boiler plate, to get std::println working
+		return std::format_to(ctx.out(), "(Board <{}> {}, destroyed is {})", p.id, p.model_name, p.destroyed);
+	}
+	constexpr auto parse(std::format_parse_context& ctx) {
+		return ctx.begin();
+	}
+};
 
 #endif // #ifndef _Board_Board_H_

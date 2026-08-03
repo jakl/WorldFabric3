@@ -42,7 +42,7 @@ namespace Chess {
 		world->disconnect();
 		world->connect(steam_socket, "1");
 
-		printf("Steam join of user : %s <of id %I64u >\n", steam->getLocalName().c_str(), steam->getLocalSteamID());
+		std::println("{} <{}> joined via Steam", steam->getLocalName(), steam->getLocalSteamID());
 	}
 
 
@@ -85,6 +85,7 @@ namespace Chess {
 		world->registerClass<Glove, GloveView>("Glove");
 		world->registerMethod(&Glove::setPosition, "setPosition");
 		world->registerMethod(&Piece::destroy, "destroy");
+		world->registerMethod(&Board::printEvent, "printEvent");
 	}
 
 	void ChessApp::createWorldAndObjects() {
@@ -117,7 +118,7 @@ namespace Chess {
 
 	// Called when switching into this state before the first time run is called
 	void ChessApp::enter(std::shared_ptr<MachineState> from) {
-		startSteamHosting();
+		//startSteamHosting();
 		setupScene();
 		registerClassesAndMethods();
 		createWorldAndObjects();
@@ -132,7 +133,10 @@ namespace Chess {
 		mouse_action->origin = window->window_target->camera_position ;
 		mouse_action->direction = window->getMouseRay() ;
 		mouse_action->clicked = window->mouseDown(1) && !mouse_down_left ;
+		std::lock(world->lock, action_map->lock);
 		action_map->performAction(mouse_action) ;
+		world->lock.unlock();
+		action_map->lock.unlock();
 		mouse_action->held_piece = mouse_action->next_held_piece ;
 		mouse_down_left = window->mouseDown(1) ;
 

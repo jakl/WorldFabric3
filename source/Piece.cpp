@@ -5,7 +5,7 @@
 #include "AudioPlugin.h"
 #include "ChessApp.h"
 #include <print>
-
+#include <format>
 
 namespace Chess {
 
@@ -13,7 +13,7 @@ void Piece::setPosition(const glm::vec3& p) {
 	position = p;
 }
 
-bool Piece::isValidMove(const glm::vec3& source_p, const glm::vec3& dest_p) const {
+bool Piece::isValidMove(const glm::vec3& dest_p) const {
 	return fabs(dest_p.x) < 3.8 && fabs(dest_p.z) < 3.8; // Destination is on the board
 }
 
@@ -21,8 +21,21 @@ void Piece::destroy() {
 	destroyed = true;
 }
 
-void Piece::print() const {
-	printf("Piece at %f, %f, %f\n", position.x, position.y, position.z);
+std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& from_p, const glm::vec3& to_p) const {
+	std::vector<glm::vec3> squares;
+	float from_x = from_p.x;
+	float from_z = from_p.z;
+
+	while (true) {
+		if (from_x < to_p.x) { from_x++; }
+		if (from_x > to_p.x) { from_x--; }
+		if (from_z < to_p.z) { from_z++; }
+		if (from_z > to_p.z) { from_z--; }
+
+		if (from_x == to_p.x && from_z == to_p.z) { return squares; }
+
+		squares.emplace_back(glm::vec3(from_x, 0, from_z));
+	}
 }
 
 // This is mandated by the engine

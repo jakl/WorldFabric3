@@ -21,24 +21,25 @@ public:
 
 	enum COLOR { black, white }; // never change the order of these lol!
 	std::string model_name;
-	int64_t board_id;
 	COLOR color;
+	int64_t board_id;
 
-	Piece(const glm::vec3& position, COLOR color, const std::string& model_name)
-		: WorldObject(position), color(color), model_name(model_name) {};
+	Piece(const glm::vec3& position, const int64_t& board_id, const COLOR& color, const std::string& model_name)
+		: WorldObject(position), board_id(board_id), color(color), model_name(model_name) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions
 	void setPosition(const glm::vec3& p);
 	void destroy();
+	std::vector<glm::vec3> squaresBetween(const glm::vec3& from_p, const glm::vec3& to_p) const;
 
 	//Functions used on observables or on read objects need to be const
-	void print() const override;
+	void print() const override {};
 
 	Piece() = default; // WorldObject's need a default constructor to make an object to deserialize into
 	virtual ~Piece() = default; // Force to be polymorphic just in case
 
-	virtual bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const = 0;
+	virtual bool isValidMove(const glm::vec3& destination_square) const = 0;
 };
 
 
@@ -64,5 +65,26 @@ public:
 
 
 } // end Piece name space
+
+template <>
+struct std::formatter<Chess::Piece::COLOR> {
+	auto format(const Chess::Piece::COLOR& c, std::format_context& ctx) const {
+		return std::format_to(ctx.out(), "{}", c ? "White" : "Black");
+	}
+	constexpr auto parse(std::format_parse_context& ctx) {
+		return ctx.begin();
+	}
+};
+
+template <>
+struct std::formatter<Chess::Piece> {
+	auto format(const Chess::Piece& p, std::format_context& ctx) const {
+		// This is the only line that matters, the rest is boiler plate, to get std::println working
+		return std::format_to(ctx.out(), "(Piece <{}> {} {} at ({},{}), destroyed is {} on board <{}>)", p.id, p.color, p.model_name, p.position.x, p.position.z, p.destroyed, p.board_id);
+	}
+	constexpr auto parse(std::format_parse_context& ctx) {
+		return ctx.begin();
+	}
+};
 
 #endif // #ifndef _Piece_Piece_H_

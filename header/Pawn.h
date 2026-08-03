@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Pawn(const glm::vec3& position, Piece::COLOR color)
-            : Piece(position, color, std::string("pawn") + (color ? "_white" : "_black")) {};
+        Pawn(const glm::vec3& position, const int64_t& board_id, const Piece::COLOR& color)
+            : Piece(position, board_id, color, std::string("pawn") + (color ? "_white" : "_black")) {};
 
         Pawn() = default;
 
@@ -20,17 +20,17 @@ namespace Chess {
             return r->getIdForType<Pawn>();
         }
 
-        bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const override {
-            if (!Piece::isValidMove(source_square, destination_square)) { return false; }
-            bool moved_towards_black = source_square.z - destination_square.z == 1;
-            bool moved_one_square = fabs(source_square.z - destination_square.z) == 1;
+        bool isValidMove(const glm::vec3& destination_square) const override {
+            if (!Piece::isValidMove(destination_square)) { return false; }
+            bool moved_towards_black = position.z - destination_square.z == 1;
+            bool moved_one_square = fabs(position.z - destination_square.z) == 1;
             bool is_white = !!color;
-            return is_white == moved_towards_black && source_square.x == destination_square.x && moved_one_square;
+            return is_white == moved_towards_black && position.x == destination_square.x && moved_one_square;
         }
     };
 
     auto static getStructure(Pawn& obj) {
-        return std::tie(obj.position, obj.model_name, obj.color);
+        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id);
     };
 
 }

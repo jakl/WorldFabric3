@@ -8,8 +8,8 @@ namespace Chess {
     {
     public:
 
-        Bishop(const glm::vec3& position, Piece::COLOR color)
-            : Piece(position, color, std::string("bishop") + (color ? "_white" : "_black")) {};
+        Bishop(const glm::vec3& position, const int64_t& board_id, const Piece::COLOR& color)
+            : Piece(position, board_id, color, std::string("bishop") + (color ? "_white" : "_black")) {};
 
         Bishop() = default;
 
@@ -20,14 +20,14 @@ namespace Chess {
             return r->getIdForType<Bishop>();
         }
 
-        bool isValidMove(const glm::vec3& source_square, const glm::vec3& destination_square) const override {
-            if (!Piece::isValidMove(source_square, destination_square)) { return false; }
-            return fabs(source_square.x - destination_square.x) - fabs(source_square.z - destination_square.z) == 0;
+        bool isValidMove(const glm::vec3& destination_square) const override {
+            if (!Piece::isValidMove(destination_square)) { return false; }
+            return fabs(position.x - destination_square.x) - fabs(position.z - destination_square.z) == 0;
         }
     };
 
     auto static getStructure(Bishop& obj) {
-        return std::tie(obj.position, obj.model_name, obj.color);
+        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id);
     };
 
 }

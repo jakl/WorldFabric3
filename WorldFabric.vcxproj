@@ -161,7 +161,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <Profile>false</Profile>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)/BIn;$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)/Bin;$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -256,6 +256,7 @@
     <ClInclude Include="header\WaterShotDefender.h" />
     <ClInclude Include="header\WaveButton.h" />
     <ClInclude Include="header\WhirlwindDefender.h" />
+    <ClInclude Include="Narball\header\NarballMain.h" />
     <ClInclude Include="include\begin_code.h" />
     <ClInclude Include="include\close_code.h" />
     <ClInclude Include="include\glew.h" />
@@ -903,8 +904,8 @@
     <ClCompile Include="engine\source\WorldPlugin.cpp" />
     <ClCompile Include="include\glm\detail\glm.cpp" />
     <ClCompile Include="include\stb_vorbis.c" />
-    <ClCompile Include="Narball\header\NarballMain.h">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\engine\header;$(VULKAN_SDK)/Include;./header;./include;./lib;./dll,.\Narball\header,.\Narball\source</AdditionalIncludeDirectories>
+    <ClCompile Include="Narball\source\NarballMain.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\engine\header;$(VULKAN_SDK)/Include;./header;./include;./lib;./dll;.\Narball\header;.\Narball\source</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="Narball\source\Ball.cpp" />
     <ClCompile Include="Narball\source\Nameplate.cpp" />

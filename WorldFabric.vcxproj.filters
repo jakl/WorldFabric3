@@ -1537,9 +1537,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="header\ConstraintTestApp.h">
-		<Filter>Header Files</Filter>
-	</ClInclude>
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="header\ChessApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Narball\header\NarballMain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="header\Board.h">
@@ -2143,8 +2146,8 @@
     <ClCompile Include="engine\source\PanelPlugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Narball\header\NarballMain.h">
-      <Filter>Header Files</Filter>
+    <ClCompile Include="Narball\source\NarballMain.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Narball\source\NarballObjects.cpp">
       <Filter>Source Files</Filter>

@@ -634,9 +634,6 @@ void VulkanPlugin::processInput(){
 		else if (event.type == SDL_EVENT_MOUSE_MOTION) {
 			mouse_position = { event.motion.x,event.motion.y };
 		}
-		else if (event.type == SDL_EVENT_MOUSE_WHEEL) {
-			mouse_wheel_position += glm::vec2({ event.wheel.x, event.wheel.y });
-		}
 		else if (event.type == SDL_EVENT_QUIT) {
 			//TODO should probably provide a way for the app to do something when shutdown this way?
 			getTool<FlagSet>()->setInt(AsyncPlugin::SHUTDOWN_FLAG, 1);

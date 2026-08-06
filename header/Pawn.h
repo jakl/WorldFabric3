@@ -20,19 +20,15 @@ namespace Chess {
             return r->getIdForType<Pawn>();
         }
 
-        bool isValidMove(const glm::vec3& destination_square) const override {
-            if (!Piece::isValidMove(destination_square)) { return false; }
+        bool isValidMove(const glm::vec3& destination) const override {
+            if (!Piece::isValidMove(destination)) return false;
 
             bool is_white = !!color;
-            bool moved_towards_black = position.z - destination_square.z > 0.0f;
-            float speed = fabs(position.z - destination_square.z);
-            bool moved_valid_speed = speed == 1.0f;
+            bool moved_towards_black = position.z - destination.z > 0.0f;
+            float speed = fabs(position.z - destination.z);
+            bool moved_valid_speed = speed == 1.0f || speed == 2.0f && !has_moved;
 
-            if (speed == 2.0f) {
-                moved_valid_speed = !has_moved;
-            }
-
-            return is_white == moved_towards_black && moved_valid_speed;
+            return position.x == destination.x && is_white == moved_towards_black && moved_valid_speed && !blocked(destination);
         }
     };
 

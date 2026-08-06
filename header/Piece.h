@@ -32,7 +32,10 @@ public:
 	// Also they're not allowed to read or write any data outside the object except through timeline functions
 	void setPosition(const glm::vec3& p);
 	void destroy();
-	std::vector<glm::vec3> squaresBetween(const glm::vec3& from_p, const glm::vec3& to_p) const;
+	std::vector<glm::vec3> squaresBetween(const glm::vec3& to_p) const;
+	bool blocked(const glm::vec3& to_p) const;
+	bool moved_like_rook(const glm::vec3& destination) const;
+	bool moved_like_bishop(const glm::vec3& destination) const;
 
 	//Functions used on observables or on read objects need to be const
 	void print() const override {};
@@ -40,7 +43,7 @@ public:
 	Piece() = default; // WorldObject's need a default constructor to make an object to deserialize into
 	virtual ~Piece() = default; // Force to be polymorphic just in case
 
-	virtual bool isValidMove(const glm::vec3& destination_square) const = 0;
+	virtual bool isValidMove(const glm::vec3& destination) const = 0;
 };
 
 

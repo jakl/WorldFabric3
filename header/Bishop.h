@@ -20,9 +20,10 @@ namespace Chess {
             return r->getIdForType<Bishop>();
         }
 
-        bool isValidMove(const glm::vec3& destination_square) const override {
-            if (!Piece::isValidMove(destination_square)) { return false; }
-            return fabs(position.x - destination_square.x) - fabs(position.z - destination_square.z) == 0;
+        bool isValidMove(const glm::vec3& destination) const override {
+            if (!Piece::isValidMove(destination)) return false;
+
+            return !blocked(destination) && moved_like_bishop(destination);
         }
     };
 

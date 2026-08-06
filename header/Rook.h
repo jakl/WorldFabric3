@@ -21,7 +21,7 @@ namespace Chess {
             return r->getIdForType<Rook>();
         }
 
-        bool isValidMove(const glm::vec3& destination_square) const override;
+        bool isValidMove(const glm::vec3& destination) const override;
     };
 
     auto static getStructure(Rook& obj) {

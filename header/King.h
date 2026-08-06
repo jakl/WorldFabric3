@@ -20,9 +20,10 @@ namespace Chess {
             return r->getIdForType<King>();
         }
 
-        bool isValidMove(const glm::vec3& destination_square) const override {
-            if (!Piece::isValidMove(destination_square)) { return false; }
-            return fabs(position.x - destination_square.x) < 2 && fabs(position.z - destination_square.z) < 2;
+        bool isValidMove(const glm::vec3& destination) const override {
+            if (!Piece::isValidMove(destination)) return false;
+
+            return fabs(position.x - destination.x) < 2 && fabs(position.z - destination.z) < 2;
         }
     };
 

@@ -14,29 +14,56 @@ void Piece::setPosition(const glm::vec3& p) {
 	has_moved = true;
 }
 
-bool Piece::isValidMove(const glm::vec3& dest_p) const {
-	return fabs(dest_p.x) < 3.8 && fabs(dest_p.z) < 3.8; // Destination is on the board
+bool Piece::isValidMove(const glm::vec3& destination) const {
+	// Destination is on the board
+	return fabs(destination.x) < 3.8 && fabs(destination.z) < 3.8 && destination != position;
 }
 
 void Piece::destroy() {
 	destroyed = true;
 }
 
-std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& from_p, const glm::vec3& to_p) const {
+// Destination angle must be a multiple of 45 degrees (0,45,90,135...)
+std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& destination) const {
 	std::vector<glm::vec3> squares;
-	float from_x = from_p.x;
-	float from_z = from_p.z;
+	float from_x = position.x;
+	float from_z = position.z;
 
 	while (true) {
-		if (from_x < to_p.x) { from_x++; }
-		if (from_x > to_p.x) { from_x--; }
-		if (from_z < to_p.z) { from_z++; }
-		if (from_z > to_p.z) { from_z--; }
+		if (from_x < destination.x) { from_x++; }
+		if (from_x > destination.x) { from_x--; }
+		if (from_z < destination.z) { from_z++; }
+		if (from_z > destination.z) { from_z--; }
 
-		if (from_x == to_p.x && from_z == to_p.z) { return squares; }
+		if (from_x == destination.x && from_z == destination.z) { return squares; }
+
+		std::println("Checking there's no piece on {}x,{}z", from_x, from_z);
 
 		squares.emplace_back(glm::vec3(from_x, 0, from_z));
 	}
+}
+
+// Destination angle must be a multiple of 45 degrees (0,45,90,135...)
+bool Piece::blocked(const glm::vec3& destination) const {
+	WorldPlugin* world = getTool<WorldPlugin>();
+	std::shared_ptr<const Board> board = world->observe<Board>("chess", board_id);
+
+	for (const auto& square : squaresBetween(destination)) {
+		auto maybe_piece = board->board_of_pieces.find(square);
+		if (maybe_piece != board->board_of_pieces.end()) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Piece::moved_like_rook(const glm::vec3& destination) const {
+	return position.x == destination.x || position.z == destination.z;
+}
+
+bool Piece::moved_like_bishop(const glm::vec3& destination) const {
+	return fabs(position.x - destination.x) - fabs(position.z - destination.z) == 0;
 }
 
 // This is mandated by the engine

@@ -33,7 +33,7 @@ public:
 	void setPosition(const glm::vec3& p);
 	void destroy();
 	std::vector<glm::vec3> squaresBetween(const glm::vec3& to_p) const;
-	bool blocked(const glm::vec3& to_p) const;
+	int64_t blocked_by(const glm::vec3& to_p) const;
 	bool moved_like_rook(const glm::vec3& destination) const;
 	bool moved_like_bishop(const glm::vec3& destination) const;
 

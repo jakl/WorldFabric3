@@ -16,7 +16,7 @@ void Piece::setPosition(const glm::vec3& p) {
 
 bool Piece::isValidMove(const glm::vec3& destination) const {
 	// Destination is on the board
-	return fabs(destination.x) < 3.8 && fabs(destination.z) < 3.8 && destination != position;
+	return fabs(destination.x) <= 3.5 && fabs(destination.z) <= 3.5 && destination != position;
 }
 
 void Piece::destroy() {
@@ -35,7 +35,8 @@ std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& destination) const
 		if (from_z < destination.z) { from_z++; }
 		if (from_z > destination.z) { from_z--; }
 
-		if (from_x == destination.x && from_z == destination.z) { return squares; }
+		if (from_x == destination.x && from_z == destination.z) return squares;
+		if (fabs(from_x) > 3.5 || fabs(from_z) > 3.5) return squares;
 
 		std::println("Checking there's no piece on {}x,{}z", from_x, from_z);
 
@@ -44,15 +45,13 @@ std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& destination) const
 }
 
 // Destination angle must be a multiple of 45 degrees (0,45,90,135...)
-bool Piece::blocked(const glm::vec3& destination) const {
+int64_t Piece::blocked_by(const glm::vec3& destination) const {
 	WorldPlugin* world = getTool<WorldPlugin>();
 	std::shared_ptr<const Board> board = world->observe<Board>("chess", board_id);
 
 	for (const auto& square : squaresBetween(destination)) {
 		auto maybe_piece = board->board_of_pieces.find(square);
-		if (maybe_piece != board->board_of_pieces.end()) {
-			return true;
-		}
+		if (maybe_piece != board->board_of_pieces.end()) return maybe_piece->second;
 	}
 
 	return false;

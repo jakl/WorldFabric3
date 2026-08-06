@@ -23,7 +23,7 @@ namespace Chess {
         bool isValidMove(const glm::vec3& destination) const override {
             if (!Piece::isValidMove(destination)) return false;
 
-            return !blocked(destination) && moved_like_bishop(destination);
+            return !blocked_by(destination) && moved_like_bishop(destination);
         }
     };
 

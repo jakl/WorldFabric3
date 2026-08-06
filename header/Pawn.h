@@ -28,7 +28,7 @@ namespace Chess {
             float speed = fabs(position.z - destination.z);
             bool moved_valid_speed = speed == 1.0f || speed == 2.0f && !has_moved;
 
-            return position.x == destination.x && is_white == moved_towards_black && moved_valid_speed && !blocked(destination);
+            return position.x == destination.x && is_white == moved_towards_black && moved_valid_speed && !blocked_by(destination);
         }
     };
 

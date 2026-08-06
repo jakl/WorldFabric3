@@ -167,21 +167,15 @@ namespace Chess {
 			camera_down_thi = camera_thi;
 			camera_down_theta = camera_theta;
 
-		}
-		else {
+		} else {
 			mouse_down_right = false;
 		}
 
-		if (mouse_wheel_y_previous < window->getMouseWheelPosition().y) {
-			zoom *= 0.95f;
-		}
-		else if (mouse_wheel_y_previous > window->getMouseWheelPosition().y) {
-			zoom /= 0.95f;
-		}
+		if (mouse_wheel_y_previous < window->getMouseWheelPosition().y) { zoom *= 0.95f; }
+		if (mouse_wheel_y_previous > window->getMouseWheelPosition().y) { zoom /= 0.95f; }
 
-		if (zoom < 1.0f) {
-			zoom = 1.0f;
-		}
+		if (zoom < 1.0f) { zoom = 1.0f;	}
+
 		mouse_wheel_y_previous = window->getMouseWheelPosition().y;
 
 		glm::vec3 camera_position = glm::vec3(cosf(camera_theta) * cosf(camera_thi), sinf(camera_thi), sinf(camera_theta) * cosf(camera_thi)) * zoom;

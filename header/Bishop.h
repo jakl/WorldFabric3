@@ -27,7 +27,7 @@ namespace Chess {
     };
 
     auto static getStructure(Bishop& obj) {
-        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id);
+        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id, obj.has_moved);
     };
 
 }

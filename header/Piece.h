@@ -23,6 +23,7 @@ public:
 	std::string model_name;
 	COLOR color;
 	int64_t board_id;
+	bool has_moved = false;
 
 	Piece(const glm::vec3& position, const int64_t& board_id, const COLOR& color, const std::string& model_name)
 		: WorldObject(position), board_id(board_id), color(color), model_name(model_name) {};

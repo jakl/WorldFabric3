@@ -22,15 +22,22 @@ namespace Chess {
 
         bool isValidMove(const glm::vec3& destination_square) const override {
             if (!Piece::isValidMove(destination_square)) { return false; }
-            bool moved_towards_black = position.z - destination_square.z == 1;
-            bool moved_one_square = fabs(position.z - destination_square.z) == 1;
+
             bool is_white = !!color;
-            return is_white == moved_towards_black && position.x == destination_square.x && moved_one_square;
+            bool moved_towards_black = position.z - destination_square.z > 0.0f;
+            float speed = fabs(position.z - destination_square.z);
+            bool moved_valid_speed = speed == 1.0f;
+
+            if (speed == 2.0f) {
+                moved_valid_speed = !has_moved;
+            }
+
+            return is_white == moved_towards_black && moved_valid_speed;
         }
     };
 
     auto static getStructure(Pawn& obj) {
-        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id);
+        return std::tie(obj.position, obj.model_name, obj.color, obj.board_id, obj.has_moved);
     };
 
 }

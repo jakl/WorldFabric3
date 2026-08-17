@@ -68,6 +68,7 @@ namespace Chess {
 
 		world->registerClass<Rook, PieceView>("Rook");
 		world->registerMethod(&Rook::setPosition, "setPosition");
+		world->registerMethod(&Rook::castle, "castle");
 		world->registerClass<Pawn, PieceView>("Pawn");
 		world->registerMethod(&Pawn::setPosition, "setPosition");
 		world->registerClass<Queen, PieceView>("Queen");
@@ -82,10 +83,10 @@ namespace Chess {
 		world->registerMethod(&Board::init, "init");
 		world->registerMethod(&Board::createBlackGlove, "createBlackGlove");
 		world->registerMethod(&Board::setPiecePosition, "setPiecePosition");
+		world->registerMethod(&Board::printEvent, "printEvent");
 		world->registerClass<Glove, GloveView>("Glove");
 		world->registerMethod(&Glove::setPosition, "setPosition");
 		world->registerMethod(&Piece::destroy, "destroy");
-		world->registerMethod(&Board::printEvent, "printEvent");
 	}
 
 	void ChessApp::createWorldAndObjects() {

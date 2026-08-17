@@ -57,6 +57,16 @@ int64_t Piece::blocked_by(const glm::vec3& destination) const {
 	return false;
 }
 
+int64_t Piece::piece_at(const glm::vec3& destination) const {
+	WorldPlugin* world = getTool<WorldPlugin>();
+	std::shared_ptr<const Board> board = world->observe<Board>("chess", board_id);
+
+	auto maybe_piece = board->board_of_pieces.find(destination);
+	if (maybe_piece != board->board_of_pieces.end()) return maybe_piece->second;
+
+	return false;
+}
+
 bool Piece::moved_like_rook(const glm::vec3& destination) const {
 	return position.x == destination.x || position.z == destination.z;
 }

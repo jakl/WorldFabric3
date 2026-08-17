@@ -22,6 +22,7 @@ namespace Chess {
         }
 
         bool isValidMove(const glm::vec3& destination) const override;
+        void castle();
     };
 
     auto static getStructure(Rook& obj) {

@@ -148,9 +148,8 @@ namespace Chess {
 				move_piece_to_p.z = std::round(move_piece_to_p.z + .5f) - .5f;
 
 				// Only send the network event if the position is different
-				std::shared_ptr<const Board> board = world->observeNearest<Board>("chess");
 				if (piece && (piece->position.x != move_piece_to_p.x || piece->position.z != move_piece_to_p.z) && piece->isValidMove(move_piece_to_p)) {
-					world->queue("chess", board->id, &Board::setPiecePosition, piece->position, move_piece_to_p);
+					world->queue("chess", last_observation->id, &Board::setPiecePosition, piece->position, move_piece_to_p);
 				}
 				action->next_held_piece = -1; // drop piece
 			}

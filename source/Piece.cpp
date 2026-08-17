@@ -16,7 +16,7 @@ void Piece::setPosition(const glm::vec3& p) {
 
 bool Piece::isValidMove(const glm::vec3& destination) const {
 	// Destination is on the board
-	return fabs(destination.x) <= 3.5 && fabs(destination.z) <= 3.5 && destination != position;
+	return fabs(destination.x) <= 4 && fabs(destination.z) <= 4 && destination != position;
 }
 
 void Piece::destroy() {

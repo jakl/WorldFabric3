@@ -66,7 +66,7 @@ void VulkanPlugin::run() {
 	VulkanBuffer::vulkan_buffers_to_destroy.clear();
 	std::vector<BufferToDestroy> vulkan_buffers_to_still_destroy;
 	for (BufferToDestroy& buffer : buffers_to_process) {
-		if (millisBetween(buffer.time, current_time) > millis_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
+		if (millisBetween(buffer.time, current_time) > millis_to_hold_buffer && frame_number >= buffer.frame + frames_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
 			destroyBuffer(buffer);
 		}
 		else {
@@ -80,7 +80,7 @@ void VulkanPlugin::run() {
 	std::vector<ImageToDestroy> images_to_process = VulkanImage::vulkan_images_to_destroy; // copy to reduce async nonsense
 	VulkanImage::vulkan_images_to_destroy.clear();
 	for (ImageToDestroy& image : images_to_process) {
-		if (millisBetween(image.time, current_time) > millis_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
+		if (millisBetween(image.time, current_time) > millis_to_hold_buffer && frame_number >= image.frame + frames_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
 			destroyVulkanImage(image);
 		}else {
 			vulkan_images_to_still_destroy.push_back(image);
@@ -813,7 +813,17 @@ void VulkanPlugin::draw(){
 }
 
 
+VulkanBuffer::~VulkanBuffer() {
+	buffer_lock.lock();
+	vulkan_buffers_to_destroy.emplace_back(buffer,allocation, VulkanPlugin::frame_number, now());
+	buffer_lock.unlock();
+}
 
+VulkanImage::~VulkanImage() {
+	buffer_lock.lock();
+	vulkan_images_to_destroy.emplace_back(image,imageView,allocation,VulkanPlugin::frame_number, now());
+	buffer_lock.unlock();
+}
 
 void VulkanPlugin::clear(VkCommandBuffer cmd, std::vector<std::shared_ptr<WFImage>> output_attachments, std::vector <VkClearColorValue> output_clear, std::vector<std::shared_ptr <WFImage>> depth_attachments){
 	//Clear colors
@@ -887,11 +897,13 @@ void VulkanPlugin::clear(VkCommandBuffer cmd, std::shared_ptr<VulkanBuffer> buff
 
 void VulkanPlugin::drawRenderables(VkCommandBuffer cmd){
 	std::map<int,std::unordered_map<int,std::vector<std::shared_ptr<Renderable>>>> to_draw; // key is phases and then groups
-	lock.lock();
+	lock.lock(); // lock just while iterating renderables
 	for(auto& [key, renderable] : renderables){
 		to_draw[renderable->phase][renderable->group].push_back(renderable) ;
+		renderable->updateBuffers(cmd, this);
 		//inputDisplay(renderable->input_num,5, true);
 	}
+	stampTime(cmd, "buffer updates complete");
 	lock.unlock();
 
 	for(auto& [phase, group_map] : to_draw){ // for each user-defined phase
@@ -910,8 +922,10 @@ void VulkanPlugin::drawRenderables(VkCommandBuffer cmd){
 		int calls = 0 ;
 		lock.lock();
 		auto active_render_targets = active_targets ;
-		
 		lock.unlock();
+
+		
+
 		for(auto& target : active_render_targets){ // for each render target
 			target->setViewport(cmd, this);
 			for (auto& [group, group_list] : group_map) { // for each group

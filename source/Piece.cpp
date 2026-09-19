@@ -15,14 +15,19 @@ void Piece::setPosition(const glm::vec3& p) {
 
 	last_moved_position = position;
 	last_moved_turn = board->turn_count;
-	position = p;
 	has_moved = true;
 	moved_count++;
+
+	setPositionSimply(p);
+}
+
+void Piece::setPositionSimply(const glm::vec3& p) {
+	position = p;
 }
 
 bool Piece::isValidMove(const glm::vec3& destination) const {
 	WorldPlugin* world = getTool<WorldPlugin>();
-	auto piece = world->observe<Piece>("chess", piece_at(destination));
+	auto piece = world->observe<Piece>("chess", pieceAt(destination));
 	bool space_empty_or_enemy = !piece || piece->color != color;
 	auto board = world->observeNearest<Board>("chess");
 	bool colors_turn = board->turn_count % 2 != color;
@@ -57,7 +62,7 @@ std::vector<glm::vec3> Piece::squaresBetween(const glm::vec3& destination) const
 }
 
 // Destination angle must be a multiple of 45 degrees (0,45,90,135...)
-int64_t Piece::blocked_by(const glm::vec3& destination) const {
+int64_t Piece::blockedBy(const glm::vec3& destination) const {
 	WorldPlugin* world = getTool<WorldPlugin>();
 	std::shared_ptr<const Board> board = world->observe<Board>("chess", board_id);
 
@@ -69,7 +74,7 @@ int64_t Piece::blocked_by(const glm::vec3& destination) const {
 	return false;
 }
 
-int64_t Piece::piece_at(const glm::vec3& destination) const {
+int64_t Piece::pieceAt(const glm::vec3& destination) const {
 	WorldPlugin* world = getTool<WorldPlugin>();
 	std::shared_ptr<const Board> board = world->observe<Board>("chess", board_id);
 
@@ -79,11 +84,11 @@ int64_t Piece::piece_at(const glm::vec3& destination) const {
 	return false;
 }
 
-bool Piece::moved_like_rook(const glm::vec3& destination) const {
+bool Piece::movedLikeRook(const glm::vec3& destination) const {
 	return position.x == destination.x || position.z == destination.z;
 }
 
-bool Piece::moved_like_bishop(const glm::vec3& destination) const {
+bool Piece::movedLikeBishop(const glm::vec3& destination) const {
 	return fabs(position.x - destination.x) - fabs(position.z - destination.z) == 0;
 }
 

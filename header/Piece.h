@@ -23,24 +23,27 @@ public:
 	std::string model_name;
 	COLOR color;
 	int64_t board_id;
-	bool has_moved;
-	int moved_count;
-	glm::vec3 last_moved_position;
-	int last_moved_turn;
+	bool has_moved = false;
+	int moved_count = 0;
+	glm::vec3 last_moved_position = glm::vec3(0);
+	int last_moved_turn = -1;
+	bool moves_like_rook = false;
+	bool moves_like_bishop = false;
 
 
 	Piece(const glm::vec3& position, const int64_t& board_id, const COLOR& color, const std::string& model_name)
-		: WorldObject(position), board_id(board_id), color(color), model_name(model_name), has_moved(false), moved_count(0), last_moved_turn(-1) {};
+		: WorldObject(position), board_id(board_id), color(color), model_name(model_name) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions
 	void setPosition(const glm::vec3& p);
+	void setPositionSimply(const glm::vec3& p);
 	void destroy();
 	std::vector<glm::vec3> squaresBetween(const glm::vec3& to_p) const;
-	int64_t blocked_by(const glm::vec3& to_p) const;
-	int64_t piece_at(const glm::vec3& to_p) const;
-	bool moved_like_rook(const glm::vec3& destination) const;
-	bool moved_like_bishop(const glm::vec3& destination) const;
+	int64_t blockedBy(const glm::vec3& to_p) const;
+	int64_t pieceAt(const glm::vec3& to_p) const;
+	bool movedLikeRook(const glm::vec3& destination) const;
+	bool movedLikeBishop(const glm::vec3& destination) const;
 
 	//Functions used on observables or on read objects need to be const
 	void print() const override {};

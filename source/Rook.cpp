@@ -10,7 +10,7 @@ namespace Chess {
     bool Rook::isValidMove(const glm::vec3& destination) const {
         if (!Piece::isValidMove(destination)) return false;
 
-        return !blocked_by(destination) && moved_like_rook(destination);
+        return !blockedBy(destination) && movedLikeRook(destination);
     }
 
     void Rook::castle() {

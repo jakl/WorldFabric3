@@ -9,6 +9,8 @@ namespace Chess {
     {
     public:
 
+        bool moves_like_rook = true;
+
         Rook(const glm::vec3& position, const int64_t& board_id, const Piece::COLOR& color)
             : Piece(position, board_id, color, std::string("rook") + (color ? "_white" : "_black")) {};
 

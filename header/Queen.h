@@ -8,6 +8,9 @@ namespace Chess {
     {
     public:
 
+        bool moves_like_rook = true;
+        bool moves_like_bishop = true;
+
         Queen(const glm::vec3& position, const int64_t& board_id, const Piece::COLOR& color)
             : Piece(position, board_id, color, std::string("queen") + (color ? "_white" : "_black")) {};
 
@@ -23,7 +26,7 @@ namespace Chess {
         bool isValidMove(const glm::vec3& destination) const override {
             if (!Piece::isValidMove(destination)) return false;
 
-            return !blocked_by(destination) && (moved_like_rook(destination) || moved_like_bishop(destination));
+            return !blockedBy(destination) && (movedLikeRook(destination) || movedLikeBishop(destination));
         }
     };
 

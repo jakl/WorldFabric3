@@ -124,7 +124,7 @@ namespace Chess {
 
 	// Called when switching into this state before the first time run is called
 	void ChessApp::enter(std::shared_ptr<MachineState> from) {
-		//startSteamHosting();
+		startSteamHosting();
 		setupScene();
 		registerClassesAndMethods();
 		createWorldAndObjects();

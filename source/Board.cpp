@@ -27,8 +27,8 @@ namespace Chess {
 			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black);
 			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white);
 		}
-		addPiece<King>(glm::vec3(.5, 0, -3.5), Piece::black);
-		addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
+		king_black_id = addPiece<King>(glm::vec3(.5, 0, -3.5), Piece::black);
+		king_white_id = addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
 		addPiece<Queen>(glm::vec3(-.5, 0, -3.5), Piece::black);
 		addPiece<Queen>(glm::vec3(-.5, 0, 3.5), Piece::white);
 
@@ -58,8 +58,9 @@ namespace Chess {
 	}
 
 	template <typename T>
-	void Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
+	int64_t Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
 		board_of_pieces.emplace(p, create(std::shared_ptr<T>(new T(p, id, color)), time));
+		return board_of_pieces.at(p);
 	}
 
 	// ghetto ass win animation until we bedazzle it more
@@ -78,11 +79,13 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		int64_t piece_id = board_of_pieces.at(old_p);
 		auto maybe_piece = board_of_pieces.find(new_p); // being captured
+		piece_just_captured = false;
 
 		// Take/Destroy the piece being captured
 		if (maybe_piece != board_of_pieces.end()) {
 			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, maybe_piece->second, new_p);
-			queue(maybe_piece->second, time, &Piece::destroy);
+			queue(maybe_piece->second, time, &Piece::setPosition, glm::vec3(FLT_MAX)); // Just move it out of frame in case it was an invalid move
+			piece_just_captured = maybe_piece->second;
 
 			auto king = world->observe<King>("chess", maybe_piece->second);
 			if (king) { // The king has been captured
@@ -100,6 +103,20 @@ namespace Chess {
 		board_of_pieces.emplace(new_p, piece_id);
 		queue(piece_id, time, &Piece::setPosition, new_p);
 		std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
+	}
+
+	bool Board::undoIfKingInCheck(Piece::COLOR color) {
+		WorldPlugin* world = getTool<WorldPlugin>();
+		int64_t king_id = !!color ? king_white_id : king_black_id;
+		auto king = world->observe<King>("chess", king_id);
+
+		// Get the closest piece from the king's position in every horizontal/vertical/diagonal direction
+		//     and if it's a rook/bishop/queen and can take the king, then proceed with "king is in check"
+		// Also get all the possible knight moves from the king's position, and check if there's any knights on them.
+		// 
+		// If the king is in check, we need to rollback the most recent move:
+		//     untake the piece_just_captured if any
+		//     return true so Piece::isValidMove knows to undo the move it's attempting and return false
 	}
 
 	void Board::promote(const glm::vec3& old_p, const glm::vec3& new_p) {

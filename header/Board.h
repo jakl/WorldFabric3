@@ -32,10 +32,13 @@ namespace Chess {
 		std::string model_name;
 		int64_t glove_white_id = -1;
 		int64_t glove_black_id = -1;
-		int turn_count;
-		bool game_over;
-		bool select_promotion;
-		glm::vec3 most_recent_promotion_square;
+		int64_t king_white_id = -1;
+		int64_t king_black_id = -1;
+		int turn_count = 0;
+		bool game_over = false;
+		bool select_promotion = false;
+		int64_t piece_just_captured = false;
+		glm::vec3 most_recent_promotion_square = glm::vec3(0);
 		std::map<glm::vec3, int64_t, decltype([](glm::vec3 a, glm::vec3 b) {
 			// Need to compare vec3's so the map can be ordered
 			if (a.x != b.x) return a.x < b.x;
@@ -59,12 +62,13 @@ namespace Chess {
 		void createBlackGlove();
 
 		template <typename T>
-		void addPiece(const glm::vec3& p, const Piece::COLOR& color);
+		int64_t addPiece(const glm::vec3& p, const Piece::COLOR& color);
 
 		void setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p);
 		void promote(const glm::vec3& old_p, const glm::vec3& new_p);
 		void takePiece(const glm::vec3& piece);
 		void nextTurn();
+		bool undoIfKingInCheck(Piece::COLOR color);
 		void clearPromotionSelection();
 		void gameOver(const Piece::COLOR& color);
 

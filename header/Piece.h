@@ -23,14 +23,14 @@ public:
 	std::string model_name;
 	COLOR color;
 	int64_t board_id;
-	bool has_moved;
-	int moved_count;
-	glm::vec3 last_moved_position;
-	int last_moved_turn;
+	bool has_moved = false;
+	int moved_count = 0;
+	glm::vec3 last_moved_position = glm::vec3(0);
+	int last_moved_turn = -1;
 
 
 	Piece(const glm::vec3& position, const int64_t& board_id, const COLOR& color, const std::string& model_name)
-		: WorldObject(position), board_id(board_id), color(color), model_name(model_name), has_moved(false), moved_count(0), last_moved_turn(-1) {};
+		: WorldObject(position), board_id(board_id), color(color), model_name(model_name) {};
 
 	//Functions to be used as events must be void return and only const& parameters
 	// Also they're not allowed to read or write any data outside the object except through timeline functions

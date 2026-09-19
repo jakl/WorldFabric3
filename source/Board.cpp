@@ -27,8 +27,8 @@ namespace Chess {
 			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, -3.5), Piece::black);
 			addPiece<Bishop>(glm::vec3(i * 3 - 1.5, 0, 3.5), Piece::white);
 		}
-		addPiece<King>(glm::vec3(.5, 0, -3.5), Piece::black);
-		addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
+		king_black_id = addPiece<King>(glm::vec3(.5, 0, -3.5), Piece::black);
+		king_white_id = addPiece<King>(glm::vec3(.5, 0, 3.5), Piece::white);
 		addPiece<Queen>(glm::vec3(-.5, 0, -3.5), Piece::black);
 		addPiece<Queen>(glm::vec3(-.5, 0, 3.5), Piece::white);
 
@@ -58,8 +58,9 @@ namespace Chess {
 	}
 
 	template <typename T>
-	void Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
+	int64_t Board::addPiece(const glm::vec3& p, const Piece::COLOR& color) {
 		board_of_pieces.emplace(p, create(std::shared_ptr<T>(new T(p, id, color)), time));
+		return board_of_pieces.at(p);
 	}
 
 	// ghetto ass win animation until we bedazzle it more
@@ -72,34 +73,48 @@ namespace Chess {
 			addPiece<King>(glm::vec3(4.5, 0, -1.0 * i), color);
 			addPiece<King>(glm::vec3(-4.5, 0, -1.0 * i), color);
 		}
+		std::println("VICTORY FOR {} and GAME OVER", color ? "white" : "black");
 	}
 
 	void Board::setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p) {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		int64_t piece_id = board_of_pieces.at(old_p);
-		auto maybe_piece = board_of_pieces.find(new_p); // being captured
+		auto piece = world->observe<Piece>("chess", piece_id);
+		bool piece_is_king = !!world->observe<King>("chess", piece_id);
+		int64_t piece_just_captured = false;
 
 		// Take/Destroy the piece being captured
-		if (maybe_piece != board_of_pieces.end()) {
-			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, maybe_piece->second, new_p);
-			queue(maybe_piece->second, time, &Piece::destroy);
+		if (board_of_pieces.contains(new_p)) {
+			int64_t piece_captured_id = board_of_pieces.at(new_p);
 
-			auto king = world->observe<King>("chess", maybe_piece->second);
-			if (king) { // The king has been captured
-				auto winner = world->observe<Piece>("chess", piece_id); // Assume capturing piece exists
+			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, piece_captured_id, new_p);
+			piece_just_captured = piece_captured_id;
 
-				std::println("THE KING HAS FALLEN. GAME OVER.");
-				game_over = true;
-				queue(id, time, &Board::gameOver, winner->color);
-			}
+			auto king = world->observe<King>("chess", piece_captured_id);
+			if (king) game_over = true;
 		}
 
 		// Move the capturer into it's place
 		board_of_pieces.erase(old_p);
 		board_of_pieces.erase(new_p);
 		board_of_pieces.emplace(new_p, piece_id);
-		queue(piece_id, time, &Piece::setPosition, new_p);
-		std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
+
+		auto king = world->observe<King>("chess", !!piece->color ? king_white_id : king_black_id);
+		if (king->inCheck(piece_is_king ? new_p : king->position)) {
+			// Put everything back how it was before the move
+			board_of_pieces.erase(new_p);
+			board_of_pieces.emplace(old_p, piece_id);
+			if (piece_just_captured) board_of_pieces.emplace(new_p, piece_just_captured);
+			game_over = false;
+
+		} else {
+			// Execute the final phase of the move
+			queue(piece_just_captured, time, &Piece::destroy);
+			queue(piece_id, time, &Piece::setPosition, new_p);
+			if (game_over) queue(id, time, &Board::gameOver, piece->color);
+			turn_count++;
+			std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
+		}
 	}
 
 	void Board::promote(const glm::vec3& old_p, const glm::vec3& new_p) {
@@ -256,7 +271,6 @@ namespace Chess {
 			startPromotion(destination, piece);
 		} else if (piece->isValidMove(destination)) {
 			world->queue("chess", last_observation->id, &Board::setPiecePosition, piece->position, destination);
-			world->queue("chess", last_observation->id, &Board::nextTurn);
 		}
 	}
 
@@ -264,8 +278,7 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		if (world->amHosting()) {
 			world->queue("chess", last_observation->glove_white_id, &Glove::setPosition, mouse_on_board_pos);
-		}
-		else {
+		} else {
 			if (last_observation->glove_black_id == -1) {
 				world->queue("chess", last_observation->id, &Board::createBlackGlove);
 			}
@@ -319,10 +332,10 @@ namespace Chess {
 		bool trying_to_castle_east = destination.x > 0;
 		float rook_x = trying_to_castle_east ? 3.5f : -3.5f;
 		glm::vec3 rook_pos = glm::vec3(rook_x, 0, king->position.z);
-		int64_t rook_id = king->piece_at(rook_pos);
+		int64_t rook_id = king->pieceAt(rook_pos);
 		auto rook = world->observe<Rook>("chess", rook_id);
 
-		if (rook && !king->has_moved && !rook->has_moved && !king->blocked_by(rook_pos)) {
+		if (rook && !king->has_moved && !rook->has_moved && !king->blockedBy(rook_pos)) {
 			world->queue("chess", rook_id, &Rook::castle);
 			world->queue("chess", last_observation->id, &Board::setPiecePosition, king->position, destination);
 			world->queue("chess", last_observation->id, &Board::nextTurn);

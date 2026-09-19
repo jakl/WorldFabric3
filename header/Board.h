@@ -32,10 +32,12 @@ namespace Chess {
 		std::string model_name;
 		int64_t glove_white_id = -1;
 		int64_t glove_black_id = -1;
-		int turn_count;
-		bool game_over;
-		bool select_promotion;
-		glm::vec3 most_recent_promotion_square;
+		int64_t king_white_id = -1;
+		int64_t king_black_id = -1;
+		int turn_count = 0;
+		bool game_over = false;
+		bool select_promotion = false;
+		glm::vec3 most_recent_promotion_square = glm::vec3(0);
 		std::map<glm::vec3, int64_t, decltype([](glm::vec3 a, glm::vec3 b) {
 			// Need to compare vec3's so the map can be ordered
 			if (a.x != b.x) return a.x < b.x;
@@ -59,12 +61,13 @@ namespace Chess {
 		void createBlackGlove();
 
 		template <typename T>
-		void addPiece(const glm::vec3& p, const Piece::COLOR& color);
+		int64_t addPiece(const glm::vec3& p, const Piece::COLOR& color);
 
 		void setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p);
 		void promote(const glm::vec3& old_p, const glm::vec3& new_p);
 		void takePiece(const glm::vec3& piece);
 		void nextTurn();
+		bool undoIfKingInCheck(std::shared_ptr<const Piece>& piece, const glm::vec3& new_p);
 		void clearPromotionSelection();
 		void gameOver(const Piece::COLOR& color);
 
@@ -77,7 +80,7 @@ namespace Chess {
 	};
 
 	auto static getStructure(Board& obj) {
-		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.board_of_pieces, obj.turn_count, obj.game_over);
+		return std::tie(obj.position, obj.model_name, obj.glove_black_id, obj.glove_white_id, obj.board_of_pieces, obj.turn_count, obj.game_over, obj.king_black_id, obj.king_white_id);
 	}
 
 
@@ -126,7 +129,7 @@ template <>
 struct std::formatter<Chess::Board> {
 	auto format(const Chess::Board& p, std::format_context& ctx) const {
 		// This is the only line that matters, the rest is boiler plate, to get std::println working
-		return std::format_to(ctx.out(), "(Board <{}> {}, destroyed is {})", p.id, p.model_name, p.destroyed, p.turn_count);
+		return std::format_to(ctx.out(), "(Board <{}> {}, destroyed is {} on turn {})", p.id, p.model_name, p.destroyed, p.turn_count);
 	}
 	constexpr auto parse(std::format_parse_context& ctx) {
 		return ctx.begin();

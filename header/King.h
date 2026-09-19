@@ -1,5 +1,6 @@
 #pragma once
 #include "Piece.h"
+#include "Board.h"
 
 namespace Chess {
 
@@ -33,6 +34,14 @@ namespace Chess {
 
             return false;
         }
+
+        std::list<int64_t> rookThreats(const glm::vec3& new_p) const;
+        std::list<int64_t> bishopThreats(const glm::vec3& new_p) const;
+        std::list<int64_t> knightThreats(const glm::vec3& new_p) const;
+        bool inRookLikeCheck(const glm::vec3& new_p) const;
+        bool inBishopLikeCheck(const glm::vec3& new_p) const;
+        bool inKnightLikeCheck(const glm::vec3& new_p) const;
+        bool inCheck(const glm::vec3& new_p) const;
     };
 
     auto static getStructure(King& obj) {

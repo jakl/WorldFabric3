@@ -2173,9 +2173,6 @@
     <ClCompile Include="engine\source\PanelPlugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Narball\source\NarballMain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Narball\source\NarballObjects.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -2207,8 +2204,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\ConstraintTestApp.cpp">
-		<Filter>Source Files</Filter>
-	</ClCompile>
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="source\ChessApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -2243,6 +2240,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="engine\source\NetPhysics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Pawn.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\King.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

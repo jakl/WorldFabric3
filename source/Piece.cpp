@@ -33,17 +33,7 @@ bool Piece::isValidMove(const glm::vec3& destination) const {
 	bool colors_turn = board->turn_count % 2 != color;
 
 	// Destination is on the board and empty or enemy, and it's white/black's turn
-	bool physically_valid = fabs(destination.x) <= 4 && fabs(destination.z) <= 4 && destination != position && space_empty_or_enemy && colors_turn && !board->game_over;
-
-	if (physically_valid) {
-		// pretend to make the move and undo if in check
-		if (board->undoIfKingInCheck(color)) {
-			// TODO: Damnit! This is all const so I can't "pretend" to make a move if I actually move it, even if I promise to put it back how I found it
-		}
-		return true;
-	} else {
-		return false;
-	}
+	return fabs(destination.x) <= 4 && fabs(destination.z) <= 4 && destination != position && space_empty_or_enemy && colors_turn && !board->game_over;
 }
 
 void Piece::destroy() {

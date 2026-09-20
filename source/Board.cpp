@@ -73,53 +73,47 @@ namespace Chess {
 			addPiece<King>(glm::vec3(4.5, 0, -1.0 * i), color);
 			addPiece<King>(glm::vec3(-4.5, 0, -1.0 * i), color);
 		}
+		std::println("VICTORY FOR {} and GAME OVER", color ? "white" : "black");
 	}
 
 	void Board::setPiecePosition(const glm::vec3& old_p, const glm::vec3& new_p) {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		int64_t piece_id = board_of_pieces.at(old_p);
-		auto maybe_piece = board_of_pieces.find(new_p); // being captured
-		piece_just_captured = false;
+		auto piece = world->observe<Piece>("chess", piece_id);
+		int64_t piece_just_captured = false;
 
 		// Take/Destroy the piece being captured
-		if (maybe_piece != board_of_pieces.end()) {
-			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, maybe_piece->second, new_p);
-			queue(maybe_piece->second, time, &Piece::setPositionSimply, glm::vec3(FLT_MAX)); // Just move it out of frame in case it was an invalid move to undo
-			piece_just_captured = maybe_piece->second;
+		if (board_of_pieces.contains(new_p)) {
+			int64_t piece_captured_id = board_of_pieces.at(new_p);
 
-			auto king = world->observe<King>("chess", maybe_piece->second);
-			if (king) { // The king has been captured
-				auto winner = world->observe<Piece>("chess", piece_id); // Assume capturing piece exists
+			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, piece_captured_id, new_p);
+			piece_just_captured = piece_captured_id;
 
-				std::println("THE KING HAS FALLEN. GAME OVER.");
-				game_over = true;
-				queue(id, time, &Board::gameOver, winner->color);
-			}
+			auto king = world->observe<King>("chess", piece_captured_id);
+			if (king) game_over = true;
 		}
 
 		// Move the capturer into it's place
 		board_of_pieces.erase(old_p);
 		board_of_pieces.erase(new_p);
 		board_of_pieces.emplace(new_p, piece_id);
-		queue(piece_id, time, &Piece::setPosition, new_p);
-		std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
-	}
 
-	bool Board::undoIfKingInCheck(const Piece::COLOR& color) const {
-		WorldPlugin* world = getTool<WorldPlugin>();
-		auto king = world->observe<King>("chess", !!color ? king_white_id : king_black_id);
-
+		auto king = world->observe<King>("chess", !!piece->color ? king_white_id : king_black_id);
 		if (king->inCheck()) {
-			if (piece_just_captured) {
-				// Undo the piece capture
-				// TODO: Damnit none of this works because of the const 
-				//world->queue(piece_just_captured, &Piece::setPositionSimply, king->position);
-				//board_of_pieces.erase(king->position);
-				//board_of_pieces.emplace(king->position, piece_just_captured);
-			}
-			return true;
+			// Put everything back how it was before the move
+			board_of_pieces.erase(new_p);
+			board_of_pieces.emplace(old_p, piece_id);
+			if (piece_just_captured) board_of_pieces.emplace(new_p, piece_just_captured);
+			game_over = false;
+
+		} else {
+			// Execute the final phase of the move
+			queue(piece_just_captured, time, &Piece::destroy);
+			queue(piece_id, time, &Piece::setPosition, new_p);
+			if (game_over) queue(id, time, &Board::gameOver, piece->color);
+			turn_count++;
+			std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
 		}
-		return false;
 	}
 
 	void Board::promote(const glm::vec3& old_p, const glm::vec3& new_p) {
@@ -276,7 +270,6 @@ namespace Chess {
 			startPromotion(destination, piece);
 		} else if (piece->isValidMove(destination)) {
 			world->queue("chess", last_observation->id, &Board::setPiecePosition, piece->position, destination);
-			world->queue("chess", last_observation->id, &Board::nextTurn);
 		}
 	}
 

@@ -80,6 +80,7 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		int64_t piece_id = board_of_pieces.at(old_p);
 		auto piece = world->observe<Piece>("chess", piece_id);
+		bool piece_is_king = !!world->observe<King>("chess", piece_id);
 		int64_t piece_just_captured = false;
 
 		// Take/Destroy the piece being captured
@@ -99,7 +100,7 @@ namespace Chess {
 		board_of_pieces.emplace(new_p, piece_id);
 
 		auto king = world->observe<King>("chess", !!piece->color ? king_white_id : king_black_id);
-		if (king->inCheck()) {
+		if (king->inCheck(piece_is_king ? new_p : king->position)) {
 			// Put everything back how it was before the move
 			board_of_pieces.erase(new_p);
 			board_of_pieces.emplace(old_p, piece_id);

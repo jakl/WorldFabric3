@@ -35,10 +35,10 @@ namespace Chess {
             return false;
         }
 
-        std::list<int64_t> rookThreats() const;
-        std::list<int64_t> bishopThreats() const;
-        std::list<int64_t> knightThreats() const;
-        bool inCheck() const;
+        std::list<int64_t> rookThreats(const glm::vec3& new_p) const;
+        std::list<int64_t> bishopThreats(const glm::vec3& new_p) const;
+        std::list<int64_t> knightThreats(const glm::vec3& new_p) const;
+        bool inCheck(const glm::vec3& new_p) const;
     };
 
     auto static getStructure(King& obj) {

@@ -38,6 +38,9 @@ namespace Chess {
         std::list<int64_t> rookThreats(const glm::vec3& new_p) const;
         std::list<int64_t> bishopThreats(const glm::vec3& new_p) const;
         std::list<int64_t> knightThreats(const glm::vec3& new_p) const;
+        bool inRookLikeCheck(const glm::vec3& new_p) const;
+        bool inBishopLikeCheck(const glm::vec3& new_p) const;
+        bool inKnightLikeCheck(const glm::vec3& new_p) const;
         bool inCheck(const glm::vec3& new_p) const;
     };
 

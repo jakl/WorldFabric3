@@ -68,17 +68,23 @@ namespace Chess {
 
 		world->registerClass<Rook, PieceView>("Rook");
 		world->registerMethod(&Rook::setPosition, "setPosition");
+		world->registerMethod(&Rook::setPosition, "setPositionSimply");
 		world->registerMethod(&Rook::castle, "castle");
 		world->registerClass<Pawn, PieceView>("Pawn");
 		world->registerMethod(&Pawn::setPosition, "setPosition");
+		world->registerMethod(&Pawn::setPosition, "setPositionSimply");
 		world->registerClass<Queen, PieceView>("Queen");
 		world->registerMethod(&Queen::setPosition, "setPosition");
+		world->registerMethod(&Queen::setPosition, "setPositionSimply");
 		world->registerClass<King, PieceView>("King");
 		world->registerMethod(&King::setPosition, "setPosition");
+		world->registerMethod(&King::setPosition, "setPositionSimply");
 		world->registerClass<Bishop, PieceView>("Bishop");
 		world->registerMethod(&Bishop::setPosition, "setPosition");
+		world->registerMethod(&Bishop::setPosition, "setPositionSimply");
 		world->registerClass<Knight, PieceView>("Knight");
 		world->registerMethod(&Knight::setPosition, "setPosition");
+		world->registerMethod(&Knight::setPosition, "setPositionSimply");
 		world->registerClass<Board, BoardView>("Board");
 		world->registerMethod(&Board::init, "init");
 		world->registerMethod(&Board::createBlackGlove, "createBlackGlove");

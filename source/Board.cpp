@@ -84,7 +84,7 @@ namespace Chess {
 		// Take/Destroy the piece being captured
 		if (maybe_piece != board_of_pieces.end()) {
 			std::println("Piece<{}> at {} is taking Piece<{}> at {}", piece_id, old_p, maybe_piece->second, new_p);
-			queue(maybe_piece->second, time, &Piece::setPosition, glm::vec3(FLT_MAX)); // Just move it out of frame in case it was an invalid move
+			queue(maybe_piece->second, time, &Piece::setPositionSimply, glm::vec3(FLT_MAX)); // Just move it out of frame in case it was an invalid move to undo
 			piece_just_captured = maybe_piece->second;
 
 			auto king = world->observe<King>("chess", maybe_piece->second);
@@ -105,18 +105,21 @@ namespace Chess {
 		std::println("Moving Piece<{}> from {} to {}", piece_id, old_p, new_p);
 	}
 
-	bool Board::undoIfKingInCheck(Piece::COLOR color) {
+	bool Board::undoIfKingInCheck(const Piece::COLOR& color) const {
 		WorldPlugin* world = getTool<WorldPlugin>();
-		int64_t king_id = !!color ? king_white_id : king_black_id;
-		auto king = world->observe<King>("chess", king_id);
+		auto king = world->observe<King>("chess", !!color ? king_white_id : king_black_id);
 
-		// Get the closest piece from the king's position in every horizontal/vertical/diagonal direction
-		//     and if it's a rook/bishop/queen and can take the king, then proceed with "king is in check"
-		// Also get all the possible knight moves from the king's position, and check if there's any knights on them.
-		// 
-		// If the king is in check, we need to rollback the most recent move:
-		//     untake the piece_just_captured if any
-		//     return true so Piece::isValidMove knows to undo the move it's attempting and return false
+		if (king->inCheck()) {
+			if (piece_just_captured) {
+				// Undo the piece capture
+				// TODO: Damnit none of this works because of the const 
+				//world->queue(piece_just_captured, &Piece::setPositionSimply, king->position);
+				//board_of_pieces.erase(king->position);
+				//board_of_pieces.emplace(king->position, piece_just_captured);
+			}
+			return true;
+		}
+		return false;
 	}
 
 	void Board::promote(const glm::vec3& old_p, const glm::vec3& new_p) {
@@ -281,8 +284,7 @@ namespace Chess {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		if (world->amHosting()) {
 			world->queue("chess", last_observation->glove_white_id, &Glove::setPosition, mouse_on_board_pos);
-		}
-		else {
+		} else {
 			if (last_observation->glove_black_id == -1) {
 				world->queue("chess", last_observation->id, &Board::createBlackGlove);
 			}
@@ -336,10 +338,10 @@ namespace Chess {
 		bool trying_to_castle_east = destination.x > 0;
 		float rook_x = trying_to_castle_east ? 3.5f : -3.5f;
 		glm::vec3 rook_pos = glm::vec3(rook_x, 0, king->position.z);
-		int64_t rook_id = king->piece_at(rook_pos);
+		int64_t rook_id = king->pieceAt(rook_pos);
 		auto rook = world->observe<Rook>("chess", rook_id);
 
-		if (rook && !king->has_moved && !rook->has_moved && !king->blocked_by(rook_pos)) {
+		if (rook && !king->has_moved && !rook->has_moved && !king->blockedBy(rook_pos)) {
 			world->queue("chess", rook_id, &Rook::castle);
 			world->queue("chess", last_observation->id, &Board::setPiecePosition, king->position, destination);
 			world->queue("chess", last_observation->id, &Board::nextTurn);

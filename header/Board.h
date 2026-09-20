@@ -68,7 +68,7 @@ namespace Chess {
 		void promote(const glm::vec3& old_p, const glm::vec3& new_p);
 		void takePiece(const glm::vec3& piece);
 		void nextTurn();
-		bool undoIfKingInCheck(Piece::COLOR color);
+		bool undoIfKingInCheck(const Piece::COLOR& color) const;
 		void clearPromotionSelection();
 		void gameOver(const Piece::COLOR& color);
 

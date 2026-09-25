@@ -290,9 +290,12 @@ void VulkanPlugin::initVulkan(){
 	auto inst_ret = inst.require_api_version(1, 3, 0)
 		.build();
 
-	if(inst_ret.vk_result() != VK_SUCCESS){
+	if (!inst_ret && !inst_ret.has_value() && inst_ret.vk_result() != VK_SUCCESS) {
+		// It is now safe to check the error code because we know it failed
 		printf("Vulkan Instantiation failed, type code %d result : %d\n", inst_ret.error().value(), inst_ret.vk_result()) ;
-		return ;
+		return;
+	} else if (!inst_ret && !inst_ret.has_value()) {
+		printf("Failed to create vulkan instance: %d\n", inst_ret.error().value());
 	}
 	vkb::Instance vkb_inst = inst_ret.value();
 
@@ -572,6 +575,16 @@ std::shared_ptr<VulkanBuffer> VulkanPlugin::createVulkanBuffer(size_t allocSize,
 }
 
 void VulkanPlugin::destroyBuffer(BufferToDestroy& buffer){
+
+	VmaAllocationInfo allocInfo;
+	vmaGetAllocationInfo(VMA_allocator, buffer.allocation, &allocInfo);
+
+	if (allocInfo.pMappedData != nullptr) {
+		// The memory is currently mapped
+		//vmaUnmapMemory(VMA_allocator, buffer.allocation);
+	}
+
+
 	vmaDestroyBuffer(VMA_allocator, buffer.buffer, buffer.allocation);
 }
 

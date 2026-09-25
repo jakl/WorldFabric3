@@ -441,10 +441,6 @@ void setupGameStates() {
 	app->setState(Chess::ChessApp::state_name);
 }
 
-int debugMain(int argc, char* argv[]) {
-	CSVLog::findDesync({"server.csv", "client.csv"}, "time", 1.0) ;
-	return 0 ;
-}
 
 int exampleMain(int argc, char* argv[]) {
 	std::string command_line = argv[0];
@@ -585,4 +581,11 @@ int main(int argc, char* argv[]) {
 	//Narball::main(argc, argv);
 	exampleMain(argc, argv);
 	//CSVLog::findDesync({ "event_log_1.csv", "event_log_2.csv" }, "time", 1.0);
+}
+
+int debugMain(int argc, char* argv[]) {
+	_set_error_mode(_OUT_TO_STDERR);
+	assert(false);
+	//CSVLog::findDesync({"server.csv", "client.csv"}, "time", 1.0) ;
+	return exampleMain(argc, argv);
 }

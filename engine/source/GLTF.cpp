@@ -380,21 +380,21 @@ std::vector<std::shared_ptr<GLTF::RenderModel>> GLTF::getRenderBuffers(bool incl
 				if(old_to_new_index.find(triangles[k].A) == old_to_new_index.end()){
 					old_to_new_index[triangles[k].A] = num_vertices ;
 					Vertex& v = vertices[triangles[k].A];
-					render_model->vertices.push_back({v.position, v.normal, v.tex_coord,v.joints,v.weights});
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord,v.joints,v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].A]) ;
 				if (old_to_new_index.find(triangles[k].B) == old_to_new_index.end()) {
 					old_to_new_index[triangles[k].B] = num_vertices;
 					Vertex& v = vertices[triangles[k].B];
-					render_model->vertices.push_back({ v.position, v.normal, v.tex_coord,v.joints,v.weights });
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord, v.joints, v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].B]);
 				if (old_to_new_index.find(triangles[k].C) == old_to_new_index.end()) {
 					old_to_new_index[triangles[k].C] = num_vertices;
 					Vertex& v = vertices[triangles[k].C];
-					render_model->vertices.push_back({ v.position, v.normal, v.tex_coord,v.joints,v.weights });
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord, v.joints, v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].C]);
@@ -469,7 +469,8 @@ std::vector< std::shared_ptr<GLTF::RenderModel>> GLTF::getMorphedRenderBuffers(s
 	std::vector<std::shared_ptr<RenderModel>> models;
 	for (auto const& [material_id, mat] : materials) {
 		std::shared_ptr<RenderModel> render_model = std::shared_ptr<RenderModel>(new RenderModel());
-		std::unordered_map<int, int> old_to_new_index;
+		static std::unordered_map<int, int> old_to_new_index;
+		old_to_new_index.clear();
 		int num_vertices = 0;
 		int num_triangles = 0;
 		for(int k : morph_triangles){
@@ -484,7 +485,7 @@ std::vector< std::shared_ptr<GLTF::RenderModel>> GLTF::getMorphedRenderBuffers(s
 						position += v.morph_position[i] * weights[i] ;
 						normal += v.morph_normal[i] * weights[i] ;
 					}
-					render_model->vertices.push_back({ position, normal, v.tex_coord,v.joints,v.weights });
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord, v.joints, v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].A]);
@@ -497,7 +498,7 @@ std::vector< std::shared_ptr<GLTF::RenderModel>> GLTF::getMorphedRenderBuffers(s
 						position += v.morph_position[i] * weights[i];
 						normal += v.morph_normal[i] * weights[i];
 					}
-					render_model->vertices.push_back({ position, normal, v.tex_coord,v.joints,v.weights });
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord, v.joints, v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].B]);
@@ -510,7 +511,7 @@ std::vector< std::shared_ptr<GLTF::RenderModel>> GLTF::getMorphedRenderBuffers(s
 						position += v.morph_position[i] * weights[i];
 						normal += v.morph_normal[i] * weights[i];
 					}
-					render_model->vertices.push_back({ position, normal, v.tex_coord,v.joints,v.weights });
+					render_model->vertices.emplace_back(v.position, v.normal, v.color_mult, v.tex_coord, v.joints, v.weights);
 					num_vertices++;
 				}
 				render_model->indices.push_back(old_to_new_index[triangles[k].C]);
@@ -1038,8 +1039,14 @@ void GLTF::addPrimitive(std::vector<Vertex>& vertices, std::vector<Triangle>& tr
         GLTF::Accessor ia = GLTF::access(primitive["indices"].getInt(), json, bin);
         if(ia.type == "SCALAR"){
             if(ia.component_type == 5121){
-                printf("unsigned byte indices, technically valid, but not yet implemented, aborting\n"); // TODO
-                return ;
+                //printf("unsigned byte indices, technically valid, but not yet implemented, aborting\n"); // TODO
+				//printf("unsigned short indices\n");
+				num_indices = ia.data.getArrayLength();
+				byte* bytes = ia.data.getByteArray();
+				index_data = (uint*)malloc(4 * num_indices);
+				for (int k = 0; k < num_indices; k++) {
+					index_data[k] = (unsigned char)bytes[k];
+				}
             }else if(ia.component_type == 5123){
                 //printf("unsigned short indices\n");
                 num_indices = ia.data.getArrayLength();
@@ -1679,20 +1686,20 @@ void GLTF::setBoundingBoxModel(const glm::vec3& min, const glm::vec3& max, const
 }
 
 // Sets the model to a polyhedron of the given color (Can be used to generate visuals for ConvexShape objects)
-void GLTF::setPolyhedronModel(std::vector<glm::vec3>& vertices, std::vector<std::vector<int>>& faces, glm::vec3 color){
+void GLTF::setPolyhedronModel(const std::vector<glm::vec3>& vertices,const std::vector<std::vector<int>>& faces, glm::vec4 color){
     vector<Vertex> v ;
     vector<Triangle> t;
-    for(vector<int>& face : faces){
-        vec3& A = vertices[face[0]] ;
-        vec3& B = vertices[face[1]] ;
-        vec3& C = vertices[face[2]] ;
+    for(const vector<int>& face : faces){
+        const vec3& A = vertices.at(face.at(0)) ;
+        const vec3& B = vertices.at(face.at(1)) ;
+        const vec3& C = vertices.at(face.at(2)) ;
         vec3 normal = glm::normalize(glm::cross(B - A, C - A));
         vector<int> new_face ;
         for(int k=0;k<face.size();k++){ // duplicate vertices by face so as not to smooth normals
             Vertex p;
             p.position = vertices[face[k]];
             p.weights = vec4(1,0,0,0);
-            p.color_mult = vec4(color, 1);
+            p.color_mult = color;
             p.normal = normal ;
             new_face.push_back((int)v.size());
             v.push_back(p);
@@ -2651,6 +2658,9 @@ std::shared_ptr<GLTF> GLTF::createMirrorImage(){
 	std::shared_ptr<GLTF> mirrored = std::make_shared<GLTF>(*this) ;
 	for(Vertex& v : mirrored->vertices){
 		v.normal*= -1.0f ;
+		for(int k=0;k<v.morph_normal.size();k++){
+			v.morph_normal[k] *= -1.0f ;
+		}
 	}
 
 	for (Triangle& t : mirrored->triangles) {

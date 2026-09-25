@@ -3,406 +3,6 @@
 #include "ScenePlugin.h"
 #include "FlagSet.h"
 
-
-ConstraintTestApp::Ball::Ball(int64_t my_id, const glm::vec3& pos, const glm::vec3& vel, const glm::vec3& acc){
-	id = my_id ;
-	position = pos ;
-	velocity = vel ;
-	acceleration = acc ;
-}
-
-
-void ConstraintTestApp::Ball::updateGraphics(){
-	ScenePlugin* scene = getTool<ScenePlugin>();
-	glm::mat4 pose = glm::mat4(1.0f);
-	pose = glm::translate(pose,position) ;
-	pose = glm::scale(pose, glm::vec3(radius,radius,radius));
-	pose = pose * glm::mat4_cast(orientation) ;
-	if(instance_id == -1){
-		instance_id = scene->createInstance(BALL_MODEL,pose);
-	}else{
-		scene->setPose(instance_id, pose);
-	}
-}
-
-void ConstraintTestApp::Ball::integrateVelocity(float dt) {
-	position += velocity * dt;
-
-	// Update orientation quaternion
-	// dq/dt = 0.5 * omega * q
-	glm::quat omega_quat(0, angular_velocity.x, angular_velocity.y, angular_velocity.z);
-	orientation += (omega_quat * orientation) * (0.5f * dt);
-	orientation = glm::normalize(orientation);
-}
-
-void ConstraintTestApp::Ball::integrateAcceleration(float dt) {
-	velocity += acceleration * dt;
-}
-
-ConstraintTestApp::Ball::~Ball() {
-	getTool<ScenePlugin>()->deleteInstance(instance_id);
-}
-
-ConstraintTestApp::PhysicsCell::PhysicsCell(const glm::vec3& box_min, const glm::vec3& box_max){
-	min = box_min ;
-	max = box_max ;
-}
-
-//Custom destructor cleans up scene instance
-ConstraintTestApp::PhysicsCell::~PhysicsCell(){
-	getTool<ScenePlugin>()->deleteInstance(instance_id);
-}
-
-int64_t ConstraintTestApp::PhysicsCell::addBall(const glm::vec3& pos, const glm::vec3& vel, const glm::vec3& acc){
-	int64_t id = next_ball_id++;
-	balls[id] = std::make_shared<Ball>(id, pos,vel,acc);
-	return id ;
-}
-
-std::shared_ptr<ConstraintTestApp::Ball> ConstraintTestApp::PhysicsCell::getBall(int64_t id) {
-	auto iter = balls.find(id);
-	if (iter != balls.end()) {
-		return iter->second;
-	}
-	else {
-		return nullptr;
-	}
-}
-
-//Consraint id should be a hash of the involved bodies and the type of constraint
-std::shared_ptr<ConstraintTestApp::Constraint> ConstraintTestApp::PhysicsCell::getConstraint(int64_t id) {
-	auto iter = constraints.find(id);
-	if (iter != constraints.end()) {
-		return iter->second;
-	}
-	else {
-		return nullptr;
-	}
-}
-
-
-void ConstraintTestApp::BallCollision::updateConstraintTarget(PhysicsCell* cell){
-	auto ball_1 = cell->getBall(id1);
-	auto ball_2 = cell->getBall(id2);
-
-	float velocity_against_normal = glm::dot(ball_1->velocity - ball_2->velocity, normal);
-
-	float restitution_bias = 0.0f; // inelastic
-	if (velocity_against_normal > min_velocity_for_elastic) {
-		float e = (ball_1->elasticity + ball_2->elasticity) * 0.5f;
-		restitution_bias = e * velocity_against_normal; // elastic
-	}
-
-	//Bias against penetration with spring force
-	float penetration = (ball_1->radius + ball_2->radius) - glm::distance(ball_1->position, ball_2->position);
-	float penetration_bias = penetration_spring_coefficient * std::max(0.0f, penetration - allowed_collision_depth);
-
-	target = restitution_bias + penetration_bias;
-}
-void ConstraintTestApp::BallCollision::applyWarmingImpulse(PhysicsCell* cell){
-	auto b1 = cell->getBall(id1);
-	auto b2 = cell->getBall(id2);
-
-	b1->velocity -= warm_impulse * b1->inv_mass;
-	b2->velocity += warm_impulse * b2->inv_mass;
-}
-void ConstraintTestApp::BallCollision::applyConstraint(PhysicsCell* cell) {
-	auto b1 = cell->getBall(id1);
-	auto b2 = cell->getBall(id2);
-
-	//lever arms for torque
-	glm::vec3 r1 = point - b1->position;
-	glm::vec3 r2 = point - b2->position;
-
-	
-	glm::vec3 contact_velocity_1 = b1->velocity + glm::cross(b1->angular_velocity, r1);
-	glm::vec3 contact_velocity_2 = b2->velocity + glm::cross(b2->angular_velocity, r2);
-	glm::vec3 relative_velocity = contact_velocity_2 - contact_velocity_1 ;
-	float velocity_along_normal = glm::dot(relative_velocity, normal);
-
-	//calculate effective mass
-	float rot_term1 = glm::dot(glm::cross(b1->inv_inertia * glm::cross(r1, normal), r1), normal);
-	float rot_term2 = glm::dot(glm::cross(b2->inv_inertia * glm::cross(r2, normal), r2), normal);
-	float effective_mass_n = b1->inv_mass + b2->inv_mass + rot_term1 + rot_term2;
-	if (effective_mass_n == 0.0f){
-		return;
-	}
-
-	//Calculate current change needed based on already applied
-	float impulse_mag_n = (target - velocity_along_normal) / effective_mass_n;
-	float old_accumulated_n = glm::dot(warm_impulse, normal);
-	float new_accumulated_n = std::max(0.0f, old_accumulated_n + impulse_mag_n);
-	float current_impulse_n = new_accumulated_n - old_accumulated_n;
-	glm::vec3 impulse_vec_n = normal * current_impulse_n;
-
-	//Apply normal impulse
-	b1->velocity -= impulse_vec_n * b1->inv_mass;
-	b2->velocity += impulse_vec_n * b2->inv_mass;
-	b1->angular_velocity -= b1->inv_inertia * glm::cross(r1, impulse_vec_n);
-	b2->angular_velocity += b2->inv_inertia * glm::cross(r2, impulse_vec_n);
-
-	//update warm impulse
-	warm_impulse += impulse_vec_n;
-
-	// Recalculate velocities at point after normal impulse
-	contact_velocity_1 = b1->velocity + glm::cross(b1->angular_velocity, r1);
-	contact_velocity_2 = b2->velocity + glm::cross(b2->angular_velocity, r2);
-	relative_velocity = contact_velocity_2 - contact_velocity_1;
-
-	glm::vec3 tangent = relative_velocity - (glm::dot(relative_velocity, normal) * normal);
-	float velocity_along_tangent = glm::length(tangent);
-
-	if (velocity_along_tangent > 0.0001f) {
-		tangent *= 1.0f/velocity_along_tangent ; // normalize
-
-		// Effective mass for tangent direction
-		float rot_term1_t = glm::dot(glm::cross(b1->inv_inertia * glm::cross(r1, tangent), r1), tangent);
-		float rot_term2_t = glm::dot(glm::cross(b2->inv_inertia * glm::cross(r2, tangent), r2), tangent);
-		float effective_mass_t = b1->inv_mass + b2->inv_mass + rot_term1_t + rot_term2_t;
-
-		//Compute maximum tangent velocity ot be lost
-		float impulse_mag_t = -1.0f * velocity_along_tangent / effective_mass_t;
-
-		//Calculate current change needed based on already applied and clamp to fricton coefficient
-		float max_friction = friction_coefficient * new_accumulated_n;
-		float old_accumulated_t = glm::dot(warm_tangent_impulse, tangent);
-		float new_accumulated_t = std::min(std::max(old_accumulated_t + impulse_mag_t, -max_friction), max_friction);
-		float current_impulse_t = new_accumulated_t - old_accumulated_t;
-		glm::vec3 impulse_vec_t = tangent * current_impulse_t;
-
-		// Apply Tangent Impulse
-		b1->velocity -= impulse_vec_t * b1->inv_mass;
-		b2->velocity += impulse_vec_t * b2->inv_mass;
-		b1->angular_velocity -= b1->inv_inertia * glm::cross(r1, impulse_vec_t);
-		b2->angular_velocity += b2->inv_inertia * glm::cross(r2, impulse_vec_t);
-
-		//update warm impulse
-		warm_tangent_impulse += impulse_vec_t;
-	}
-}
-
-void ConstraintTestApp::BallWallCollision::updateConstraintTarget(PhysicsCell* cell) {
-	auto b = cell->getBall(id);
-
-	float velocity_against_normal = -1.0f * glm::dot(b->velocity, normal);
-
-	float e = b->elasticity;
-	float restitution_bias = 0.0f; // inelastic
-	if (velocity_against_normal > min_velocity_for_elastic) {
-		restitution_bias = e * velocity_against_normal; // elastic
-	}
-
-	//Resolve penetration with spring force
-	float dist = glm::dot(b->position - point, normal);
-	float penetration = b->radius - dist;
-	float penetration_bias =  penetration_spring_coefficient * std::max(0.0f, penetration - allowed_collision_depth);
-
-	target = restitution_bias + penetration_bias;
-}
-void ConstraintTestApp::BallWallCollision::applyWarmingImpulse(PhysicsCell* cell) {
-	auto b = cell->getBall(id);
-	b->velocity += warm_impulse * b->inv_mass;
-}
-void ConstraintTestApp::BallWallCollision::applyConstraint(PhysicsCell* cell) {
-	auto b = cell->getBall(id);
-
-	glm::vec3 r = point - b->position;//lever arm for torque
-	glm::vec3 contact_velocity = b->velocity + glm::cross(b->angular_velocity, r);
-	float velocity_along_normal = glm::dot(contact_velocity, normal);
-	float effective_mass_n = b->inv_mass + glm::dot(glm::cross(b->inv_inertia * glm::cross(r, normal), r), normal);
-
-	if (effective_mass_n == 0.0f){
-		return; 
-	}
-
-	float impulse_magnitude = (target - velocity_along_normal) / effective_mass_n;
-
-	//Adjust considering existing warm impulse
-	float old_accumulated_n = glm::dot(warm_impulse, normal);
-	float new_accumulated_n = std::max(0.0f, old_accumulated_n + impulse_magnitude); // can only push
-	float current_impulse_n = new_accumulated_n - old_accumulated_n;
-
-	//apply impulse along normal
-	glm::vec3 impulse_vec_n = normal * current_impulse_n;
-	b->velocity += impulse_vec_n * b->inv_mass;
-	b->angular_velocity += b->inv_inertia * glm::cross(r, impulse_vec_n);
-	//update warm impulse
-	warm_impulse += impulse_vec_n;
-
-	// Recalculate velocity at point after normal impulse is applied
-	contact_velocity = b->velocity + glm::cross(b->angular_velocity, r);
-
-	// Find the tangent vector
-	glm::vec3 tangent = contact_velocity - (glm::dot(contact_velocity, normal) * normal);
-	float velocity_along_tangent = glm::length(tangent);
-
-	if (velocity_along_tangent > 0.0001f) {
-		tangent *= 1.0f/ velocity_along_tangent ; // normalize
-		// Effective mass for the tangent direction
-		float effective_mass_t = b->inv_mass + glm::dot(glm::cross(b->inv_inertia * glm::cross(r, tangent), r), tangent);
-		//Maximum velocity to be lost
-		float impulse_mag_t =  -1.0f *  velocity_along_tangent / effective_mass_t;
-		// Clamps to friction coefficient and consider warm tangent impulse
-		float max_friction = friction_coefficient * new_accumulated_n;
-		float old_accumulated_t = glm::dot(warm_tangent_impulse, tangent);
-		float new_accumulated_t = std::min(std::max(old_accumulated_t + impulse_mag_t, -max_friction), max_friction);
-		float current_impulse_t = new_accumulated_t - old_accumulated_t;
-
-		//Apply tangent impulse
-		glm::vec3 impulse_vec_t = tangent * current_impulse_t;
-		b->velocity += impulse_vec_t * b->inv_mass;
-		b->angular_velocity += b->inv_inertia * glm::cross(r, impulse_vec_t);
-
-		//update warm tangent impulse
-		warm_tangent_impulse += impulse_vec_t;
-	}
-}
-
-void ConstraintTestApp::PhysicsCell::updateWallCollision(int64_t ball_id, int wall_id, const glm::vec3& point, const glm::vec3& normal, std::unordered_set<int64_t>& found_constraints){
-	int64_t constraint_id = getConstraintID(ball_id, wall_id, BallWallCollision::CONSTRAINT_TYPE);
-	found_constraints.insert(constraint_id); // track found so we can remove not found
-	auto iter = constraints.find(constraint_id);
-	std::shared_ptr< BallWallCollision> constraint;
-	//Add constraint if it doesn't exist already
-	if (iter == constraints.end()) {
-		constraint = std::make_shared<BallWallCollision>();
-		constraints[constraint_id] = constraint;
-	}
-	else {
-		constraint = static_pointer_cast<BallWallCollision>(iter->second);
-	}
-	//update constraint data
-	constraint->id = ball_id;
-	constraint->point = point;
-	constraint->normal = normal;
-
-}
-
-//Finds all collisions of the balls with each other and the walls of the cell
-//Creates or destroys constraints so the contents of constraints matches the current collisions
-//Also sets points and normal for collisions
-void ConstraintTestApp::PhysicsCell::updateCollisions(){
-	std::unordered_set<int64_t> found_constraints ;
-	for(auto& [id1,ball_1] : balls){
-		//Ball to ball collisions
-		for (auto& [id2, ball_2] : balls) {
-			if(id1 < id2){ // only check each once
-				float d2 = glm::distance2(ball_1->position, ball_2->position) ;
-				float rl = (ball_1->radius + ball_2->radius) ;
-				if(d2 < rl*rl){ // squared distance check avoids sqrt
-					glm::vec3 point = (ball_1->radius * ball_2->position + ball_2->radius * ball_1->position) /rl;
-					glm::vec3 normal = ball_2->position - ball_1->position;
-					normal = glm::normalize(normal) ;
-					int64_t constraint_id = getConstraintID(id1,id2,BallCollision::CONSTRAINT_TYPE) ;
-					found_constraints.insert(constraint_id); // track found so we can remove not found
-					auto iter = constraints.find(constraint_id) ;
-					std::shared_ptr< BallCollision> constraint ;
-					//Add constraint if it doesn't exist already
-					if(iter == constraints.end()){
-						constraint = std::make_shared<BallCollision>();
-						constraints[constraint_id] = constraint ;
-					}else{
-						constraint = static_pointer_cast<BallCollision>(iter->second) ;
-					}
-					//update constraint data
-					constraint->id1= id1 ;
-					constraint->id2 = id2 ;
-					constraint->point = point;
-					constraint->normal = normal;
-				}
-			}
-		}
-
-		//Ball to wall collisons
-		if(ball_1->position.x + ball_1->radius > max.x){
-			glm::vec3 point = ball_1->position ;
-			point.x = max.x ;
-			glm::vec3 normal(-1, 0 , 0) ;
-			updateWallCollision(id1,1,point,normal,found_constraints) ;
-		}
-		if (ball_1->position.x - ball_1->radius < min.x) {
-			glm::vec3 point = ball_1->position;
-			point.x = min.x;
-			glm::vec3 normal(1, 0, 0);
-			updateWallCollision(id1, 2, point, normal, found_constraints);
-		}
-		if (ball_1->position.y + ball_1->radius > max.y) {
-			glm::vec3 point = ball_1->position;
-			point.y = max.y;
-			glm::vec3 normal(0, -1, 0);
-			updateWallCollision(id1, 3, point, normal, found_constraints);
-		}
-		if (ball_1->position.y - ball_1->radius < min.y) {
-			glm::vec3 point = ball_1->position;
-			point.y = min.y;
-			glm::vec3 normal(0, 1, 0);
-			updateWallCollision(id1, 4, point, normal, found_constraints);
-		}
-		if (ball_1->position.z + ball_1->radius > max.z) {
-			glm::vec3 point = ball_1->position;
-			point.z = max.z;
-			glm::vec3 normal(0, 0, -1);
-			updateWallCollision(id1, 5, point, normal, found_constraints);
-		}
-		if (ball_1->position.z - ball_1->radius < min.z) {
-			glm::vec3 point = ball_1->position;
-			point.z = min.z;
-			glm::vec3 normal(0, 0, 1);
-			updateWallCollision(id1, 6, point, normal, found_constraints);
-		}
-			
-	}
-
-	//Delete existing constraints not found now
-	std::vector<int64_t> to_delete ;
-	for(auto& [id, constraint] : constraints){
-		if(found_constraints.find(id) == found_constraints.end()){
-			to_delete.push_back(id) ;
-		}
-	}
-	for(auto& id : to_delete){
-		constraints.erase(id) ;
-	}
-}
-
-//Run physics forward one frame
-void ConstraintTestApp::PhysicsCell::runPhysicsFrame(float dt, int constraints_iter){
-	for(auto& [id,ball] : balls){
-		ball->integrateAcceleration(dt);
-	}
-	for (auto& [id, constraint] : constraints) {
-		constraint->updateConstraintTarget(this);
-	}
-	for (auto& [id, constraint] : constraints) {
-		constraint->applyWarmingImpulse(this);
-	}
-	for(int i = 0 ; i < constraints_iter; i++){
-		for (auto& [id, constraint] : constraints) {
-			constraint->applyConstraint(this);
-		}
-	}
-	for (auto& [id, ball] : balls) {
-		ball->integrateVelocity(dt);
-	}
-	updateCollisions();
-}
-
-//Calls update graphics on all the balls
-//Also renders the box
-void ConstraintTestApp::PhysicsCell::updateGraphics(){
-	for(auto& [id,ball] : balls){
-		ball->updateGraphics();
-	}
-	if(instance_id == -1){
-		ScenePlugin* scene = getTool<ScenePlugin>();
-		std::shared_ptr<GLTF> box = std::make_shared<GLTF>() ;
-		box->setBoundingBoxModel(min,max, glm::vec4(1,1,1,1));
-		box = box->createMirrorImage() ; // Flips winding order inside out
-		scene->createModelSet(BOX_MODEL,box) ;
-		instance_id = scene->createInstance(BOX_MODEL,glm::mat4(1.0f) );
-	}
-}
-
 ConstraintTestApp::ConstraintTestApp() {}
 
 // Called when switching into this state before the first time run is called
@@ -411,8 +11,6 @@ void ConstraintTestApp::enter(std::shared_ptr<MachineState> from) {
 	ScenePlugin* scene = getTool<ScenePlugin>();
 	ParticlePlugin* particles = getTool<ParticlePlugin>();
 
-	//Load the pawn model
-	scene->createModelSet(Ball::BALL_MODEL, Ball::BALL_MODEL, true);
 
 	// Make a particle for the mouse
 	mouse_particle_id = particles->createParticle(0);
@@ -422,7 +20,7 @@ void ConstraintTestApp::enter(std::shared_ptr<MachineState> from) {
 
 	// Set up a light for the scene
 	ScenePlugin::LightComponent lc;
-	glm::vec3 light_position = glm::vec3(15, 15, -5);
+	glm::vec3 light_position = glm::vec3(15, 0.5, -0.5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(0.5, 0.5, 0.5, 1);
 	light_id = scene->createLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(light_position, look_at, glm::vec3(0, 1, 0), 0.55f, 30, 2048, 0, lc);
@@ -433,19 +31,99 @@ void ConstraintTestApp::enter(std::shared_ptr<MachineState> from) {
 	window->window_target->setCamera(camera_position, look_at, fov, glm::vec3(0, 1, 0));
 
 
-	cell = std::make_shared<PhysicsCell>(min,max) ;
+	cell = std::make_shared<Physics::SimpleLocalPhysicsCell>() ;
+
+	float ball_radius = 0.5f ;
+	float ball_mass = 1.0f ;
+	std::shared_ptr<Physics::Sphere> ball_shape = std::make_shared<Physics::Sphere>(ball_radius, ball_mass);
+	scene->createModelSet(BALL_MODEL, BALL_MODEL, true);
+	glm::mat4 transform = glm::scale(glm::mat4(1.0f), glm::vec3(ball_radius, ball_radius, ball_radius)) ;
+	ball_type = cell->addType(ball_shape, BALL_MODEL,transform, 0.6f, 0.6f) ;
+
+	
+	float box_size = 1.0f ;
+	float box_mass = 2.0f ;
+	std::shared_ptr<Physics::ConvexPolyhedron> box_shape = std::make_shared< Physics::ConvexPolyhedron>(Physics::ConvexPolyhedron::makeAxisAlignedBox(glm::vec3(box_size, box_size, box_size), box_mass));
+	std::shared_ptr<GLTF> box = std::make_shared<GLTF>();
+	box->setBoundingBoxModel(glm::vec3(-box_size * 0.5, -box_size * 0.5f, -box_size * 0.5f), glm::vec3(box_size * 0.5f, box_size * 0.5f, box_size * 0.5f), glm::vec4(0.5, 0.5, 1, 1));
+	scene->createModelSet("box", box, false, false);
+	transform = glm::mat4(1.0f);
+	box_type = cell->addType(box_shape, "box", transform,0.4f,0.6f );
+
+	float wall_size = 30.0f ;
+	std::shared_ptr<GLTF> wall = std::make_shared<GLTF>();
+	wall->setBoundingBoxModel(glm::vec3(-wall_size * 0.5, -wall_size * 0.5f, -wall_size * 0.5f), glm::vec3(wall_size * 0.5f, wall_size * 0.5f, wall_size * 0.5f), glm::vec4(0.7f, 0.7f, 0.8f, 1));
+	scene->createModelSet("wall", wall, false, false);
+	std::shared_ptr<Physics::ConvexPolyhedron> wall_shape = std::make_shared< Physics::ConvexPolyhedron>(Physics::ConvexPolyhedron::makeAxisAlignedBox(glm::vec3(wall_size, wall_size, wall_size)));
+	wall_type = cell->addType(wall_shape, "wall", transform,0.6f,0.6f);
+
+	float rod_mass = 2.0f ;
+	std::shared_ptr<Physics::ConvexPolyhedron> rod_shape = std::make_shared<Physics::ConvexPolyhedron>(Physics::ConvexPolyhedron::makeCylinder(glm::vec3(0, 0, 1.0f), glm::vec3(0, 0, -1.0f), 0.5f, 16, rod_mass));
+	std::shared_ptr<GLTF> model = std::make_shared<GLTF>();
+	model->setPolyhedronModel(rod_shape->vertex, rod_shape->face, glm::vec4(0.6f,0.1f,0.5f,0.5f));
+	scene->createModelSet("rod", model, false, true);
+	rod_type = cell->addType(rod_shape, "rod", transform, 0.4f,0.2f);
 
 
-	/*
-	float start_speed = 0.02f ;
-	float gravity = 2.0f ;
-	for(int k=0;k<20;k++){
-		glm::vec3 pos = {min.x + (0.2f + randomFloat()*0.6f) * (max.x-min.x),min.y + (0.2f + randomFloat() * 0.6f) * (max.y - min.y),min.z + (0.2f + randomFloat() * 0.6f) * (max.z - min.z) } ;
-		glm::vec3 vel = { (randomFloat() - 0.5f) * start_speed,(randomFloat() - 0.5f) * start_speed,(randomFloat() - 0.5f) * start_speed };
-		glm::vec3 acc = {0,-gravity,0} ;
-		cell->addBall(pos,vel,acc);
+	float jar_mass = 2.0f;
+	float jar_scale = 0.6f ;
+	transform = glm::scale(glm::mat4(1.0f), glm::vec3(jar_scale, jar_scale, jar_scale));
+	scene->createModelSet(JAR_MODEL, JAR_MODEL, true);
+	std::shared_ptr<GLTF> jar_model = scene->getModelController(JAR_MODEL);
+	std::shared_ptr<Physics::ConvexPolyhedron> jar_shape = std::make_shared<Physics::ConvexPolyhedron>(Physics::ConvexPolyhedron::makeApproximateHull(jar_model, jar_mass));
+	jar_shape = std::make_shared<Physics::ConvexPolyhedron>(*(jar_shape.get()),transform, jar_mass) ;
+	//std::shared_ptr<GLTF> model2 = std::make_shared<GLTF>();
+	//model2->setPolyhedronModel(jar_shape->vertex, jar_shape->face, glm::vec4(0.0f, 0.5f, 0.5f, 0.5f));
+	//scene->createModelSet("jar", model2, false, true);
+	jar_type = cell->addType(jar_shape, JAR_MODEL, transform, 0.1f,0.6f);
+	
+
+/*
+	float fox_scale = 5.0f;
+	float fox_mass = 0.0f ;
+	transform = glm::scale(glm::mat4(1.0f), glm::vec3(-fox_scale, -fox_scale, fox_scale));
+	//transform = glm::rotate(transform, 3.141f,glm::vec3(1,0,0) );
+	scene->createModelSet(FOX_MODEL, FOX_MODEL, true);
+	std::shared_ptr<GLTF> fox_model = scene->getModelController(FOX_MODEL);
+	//Physics::ConvexPolyhedron part = Physics::ConvexPolyhedron::makeApproximateHull(bunny_model,bunny_mass);
+	std::vector<Physics::ConvexPolyhedron> fox_parts = Physics::ConvexPolyhedron::collectConvexPiecesByBone(fox_model,20,4,0.5f,0.001f);
+	int k= 0 ;
+	printf("Fox parts: %d\n",(int) fox_parts.size()) ;
+	for(auto& part : fox_parts){
+		k++;
+		std::shared_ptr<Physics::ConvexPolyhedron> shape = std::make_shared<Physics::ConvexPolyhedron>(part, transform, fox_mass);
+		std::string name = concat(FOX_MODEL, k) ;
+		std::shared_ptr<GLTF> model2 = std::make_shared<GLTF>();
+		model2->setPolyhedronModel(shape->vertex, shape->face, glm::vec4(0.4f, 0.3f, 0.3f, 1.0f));
+		scene->createModelSet(name, model2, false, false);
+		glm::mat4 display_m = glm::mat4(0.0f) ;
+		int type = cell->addType(shape, name, display_m, 0.1f, 0.6f);
+		cell->add(type,glm::vec3(0,0,0)) ;
 	}
+	scene->createInstance(FOX_MODEL,transform) ;
 */
+	
+
+
+	float bunny_scale = 1.7f;
+	float bunny_mass = 8.0f;
+	transform = glm::scale(glm::mat4(1.0f), glm::vec3(bunny_scale, bunny_scale, bunny_scale)); 
+	//transform = glm::rotate(transform, 3.141f,glm::vec3(1,0,0) );
+	scene->createModelSet(BUNNY_MODEL, BUNNY_MODEL, true);
+	std::shared_ptr<GLTF> bunny_model = scene->getModelController(BUNNY_MODEL);
+	std::vector<Physics::ConvexPolyhedron> bunny_parts = Physics::ConvexPolyhedron::makeApproximateSurfaceHulls(bunny_model, bunny_mass,20,3);
+	scene->createModelSet(BUNNY_VISUAL_MODEL, BUNNY_VISUAL_MODEL, true);
+	bunny_type = cell->addType(bunny_parts, BUNNY_VISUAL_MODEL, transform , 0.1f, 0.6f);
+
+
+	// Add the container blocks
+	glm::vec3 mid = (min + max) * 0.5f;
+	cell->add(wall_type, glm::vec3(mid.x, min.y - wall_size * 0.5f, mid.z)) ;
+	cell->add(wall_type, glm::vec3(max.x + wall_size * 0.5f, mid.y, mid.z));
+	cell->add(wall_type, glm::vec3(min.x - wall_size * 0.5f, mid.y, mid.z));
+	cell->add(wall_type, glm::vec3(mid.x, mid.y, min.z - wall_size * 0.5f));
+	cell->add(wall_type, glm::vec3(mid.x, mid.y, max.z + wall_size * 0.5f));
+
 }
 
 //Called every frame while the state is active
@@ -457,8 +135,9 @@ void ConstraintTestApp::run() {
 	// Get the current time and time slice of the frame
 	current_time = now();
 	float dt = microsBetween(last_run_time, current_time) / 1000000.0f;
-	if(dt < 0 || dt > 0.5f){ 
-		dt = 0 ; // don't move on frames where something is amiss with the clock
+	
+	if(dt <= 0.001f || dt > 0.5f){ 
+		dt = 0.001f ; // don't move on frames where something is amiss with the clock
 	}
 	
 	last_run_time = current_time;
@@ -485,17 +164,30 @@ void ConstraintTestApp::run() {
 
 
 	updateCamera();
-	cell->runPhysicsFrame(dt, 10);
+	cell->runPhysicsFrame(dt, 20);
 	cell->updateGraphics();
 
 
-	if(millisBetween(last_ball_time,current_time) > millis_between_balls && cell->balls.size() < max_balls){
+	if(millisBetween(last_ball_time,current_time) > millis_between_balls && cell->bodies.size() < max_balls){
 		last_ball_time = current_time ;
-		glm::vec3 pos = { min.x + (0.4f + randomFloat() * 0.2f) * (max.x - min.x),max.y-1.0f,min.z + 0.5f };
-		glm::vec3 vel = { (randomFloat() - 0.5f) * 1.0f,(randomFloat() - 0.5f) * 1.0f,randomFloat() * 5.0f};
-		glm::vec3 acc = { 0,-gravity,0 };
-		auto id = cell->addBall(pos, vel, acc);
-		cell->balls[id]->angular_velocity = glm::vec3(3,0,0);
+		glm::vec3 pos = { min.x + (0.4f + randomFloat() * 0.2f) * (max.x - min.x),12.0f,min.z + 0.5f };
+		glm::vec3 vel = { (randomFloat() - 0.5f) * 1.0f,(randomFloat() - 0.5f) * 1.0f,1.0f+randomFloat() * 4.0f};
+		glm::mat4 r= glm::rotate(glm::mat4(1.0f), (float)(timeMilliseconds()*0.002),glm::vec3(0,1,0)) ;
+		pos = r * glm::vec4(pos,1) ;
+		vel = r * glm::vec4(vel,0);
+		float rand = randomFloat() ;
+		int type = ball_type ;
+		if(rand < 0.2f){
+			type = box_type ;
+		}else if(rand < 0.35f){
+			type = rod_type ;
+		}
+		else if (rand < 0.4f) {
+			type = bunny_type;
+		}else if(rand< 0.65){
+			type = jar_type ;
+		}
+		auto id = cell->add(type, pos, vel, glm::vec3(randomFloat()*2.0f-1.0f, randomFloat() * 2.0f-1.0f, randomFloat() * 2.0f-1.0f));
 	}
 
 
@@ -552,5 +244,5 @@ void ConstraintTestApp::updateCamera() {
 
 	glm::vec3 light_position = glm::vec3(cosf(light_theta) * cosf(light_thi), sinf(light_thi), sinf(light_theta) * cosf(light_thi)) * light_zoom;
 
-	scene->moveLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(light_id, light_position, light_look_at, glm::vec3(0, 1, 0), light_fov, 30);
+	scene->moveLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(light_id, light_position, light_look_at, glm::vec3(0, 1, 0), light_fov, 35);
 }

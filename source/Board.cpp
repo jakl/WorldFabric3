@@ -226,7 +226,7 @@ namespace Chess {
 		particles->destroyParticle(particle_id);
 	}
 
-	void BoardView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) {
+	void BoardView::receiveAction(ChessMouseAction* action, ActionTrigger* trigger) {
 		WorldPlugin* world = getTool<WorldPlugin>();
 		float board_t = ChessApp::raytrace(action->origin, action->direction, scene_id, pose);
 		glm::vec3 mouse_on_board_pos = action->origin + action->direction * board_t;

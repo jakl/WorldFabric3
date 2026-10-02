@@ -137,7 +137,7 @@ void PieceView::destroyed() {
 	action_map->removeTrigger(trigger_id);
 }
 
-void PieceView::receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) {
+void PieceView::receiveAction(ChessMouseAction* action, ActionTrigger* trigger) {
 	if (action->next_held_piece == -1 && action->clicked) { // piece not currently held and click is pressed
 		float t = ChessApp::raytrace(action->origin, action->direction,scene_id,pose) ;
 		if(t > 0){// Only act if the actual model was hit and not just he bounding box

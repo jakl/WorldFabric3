@@ -75,7 +75,7 @@ public:
 	//This view will be deleted immediately after this call (it's destructor will be called after this)
 	void destroyed() override;
 
-	void receiveAction(std::shared_ptr<ChessMouseAction>& action, std::shared_ptr<ActionTrigger>& trigger) override;
+	void receiveAction(ChessMouseAction* action, ActionTrigger* trigger) override;
 };
 
 

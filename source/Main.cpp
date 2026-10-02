@@ -585,7 +585,6 @@ int main(int argc, char* argv[]) {
 
 int debugMain(int argc, char* argv[]) {
 	_set_error_mode(_OUT_TO_STDERR);
-	assert(false);
 	//CSVLog::findDesync({"server.csv", "client.csv"}, "time", 1.0) ;
 	return exampleMain(argc, argv);
 }

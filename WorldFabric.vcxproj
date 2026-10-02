@@ -942,7 +942,6 @@
     <ClCompile Include="source\Piece.cpp" />
     <ClCompile Include="source\PyramidApp.cpp" />
     <ClCompile Include="source\PlaySong.cpp" />
-    <ClCompile Include="source\PyramidApp.cpp" />
     <ClCompile Include="source\Rook.cpp" />
     <ClCompile Include="source\SceneDemoApp.cpp" />
     <ClCompile Include="source\SceneDemoApp2.cpp" />

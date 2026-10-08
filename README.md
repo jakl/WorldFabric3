@@ -19,12 +19,29 @@ Run from the repo root so `./assets` and `./Narball` resolve, e.g. `build\gcc-re
 Shaders (`*.vert`, `*.frag` and `*.comp` in `shader/` and `Narball/shader/`) are compiled with `glslc`. Each `.spv` is written next to its source, because that's where the app loads it from. The `.spv` files are gitignored, so a fresh clone has to be built before it can run. Only edited shaders are recompiled, and new shader files are picked up automatically. Build just the shaders with `cmake --build --preset gcc-release --target shaders`. If `glslc` isn't on `PATH` or in the Vulkan SDK, set `-DWF_GLSLC=<path to glslc.exe>`.
 
 ### Choosing the app
-The `WF_APP` cache variable picks what the exe starts (default `Chess`). Changing it recompiles only `source/Main.cpp`:
+The `WF_APP` cache variable picks what the exe starts. Presets set it: the plain presets build `Chess`, and each has a `-narball` twin (for example `x64-debug-narball`, shown as "Narball - MSVC x64 Debug") that builds `Narball`. In Visual Studio, pick the app with the configuration dropdown on the toolbar. Each preset has its own build folder, so switching between them doesn't rebuild anything:
 ```
-cmake --preset gcc-release -DWF_APP=Narball
+cmake --preset gcc-release-narball
+cmake --build --preset gcc-release-narball
+```
+For a one-off with any other app, override the preset on the command line. Only `source/Main.cpp` is recompiled. The next plain `cmake --preset gcc-release` sets it back to `Chess`.
+```
+cmake --preset gcc-release -DWF_APP=Pyramid
 cmake --build --preset gcc-release
 ```
 In PowerShell, quote the argument when it contains a variable (`"-DWF_APP=$app"`). Otherwise PowerShell passes `$app` through literally.
+
+To get another app into Visual Studio's dropdown, add a `CMakeUserPresets.json` (gitignored) next to `CMakePresets.json`:
+```json
+{
+  "version": 6,
+  "configurePresets": [
+    { "name": "x64-debug-pyramid", "displayName": "Pyramid - MSVC x64 Debug",
+      "inherits": "x64-debug", "cacheVariables": { "WF_APP": "Pyramid" } }
+  ],
+  "buildPresets": [ { "name": "x64-debug-pyramid", "configurePreset": "x64-debug-pyramid" } ]
+}
+```
 
 | `WF_APP` | Starts |
 | --- | --- |
@@ -32,12 +49,12 @@ In PowerShell, quote the argument when it contains a variable (`"-DWF_APP=$app"`
 | `Narball`, `NarballServer`, `NarballDesync` | `Narball::main` as the game, dedicated server, or desync checker (`NarballDesync` compares `event_log_1.csv` and `event_log_2.csv` from the working directory) |
 | `VulkanDemo`, `SceneDemo`, `SceneDemo2`, `BallTest`, `SocketTest`, `BallThrow`, `Mirror`, `Trace`, `CollisionTest`, `ConstraintTest`, `Pyramid`, `NetPhysics` | the matching `*App` state (`SocketTest` is the `SocketTest` class) |
 
-In Visual Studio, set it under Project > CMake Settings, or in the cache editor. To add an app, append its name to `WF_APPS` in `CMakeLists.txt` and add an entry to the `apps` table in `source/Main.cpp`. A `static_assert` catches a name that's listed in CMake but missing from the table.
+Visual Studio has no editor for cache variables when a project uses presets, so use presets as above. To add an app, append its name to `WF_APPS` in `CMakeLists.txt` and add an entry to the `apps` table in `source/Main.cpp`. A `static_assert` catches a name that's listed in CMake but missing from the table.
 
 ## Visual Studio
 1. Install Visual Studio with the "Desktop development with C++" workload (includes CMake and Ninja).
 2. File > Open > Folder and select the repo root.
-3. Pick "MSVC x64 Release" (or Debug) from the configuration dropdown, then build and run WorldFabric.exe.
+3. Pick a preset from the configuration dropdown, for example "MSVC x64 Debug" for Chess or "Narball - MSVC x64 Debug" for Narball. Then build and run WorldFabric.exe.
 
 Debug with the repo root as the working directory, or shaders and assets won't load. Visual Studio's Open Folder mode starts the exe in `build\<preset>\`. To change that, create `.vs\launch.vs.json` (it's per-user and gitignored):
 ```json

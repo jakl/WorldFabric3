@@ -132,11 +132,14 @@ if(WF_APP MATCHES "^Narball")
 else()
     set(WF_STEAM_APP_ID 3485250)
 endif()
-file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt ${WF_STEAM_APP_ID})
+# The Ninja presets put the exe in the binary dir, next to this copy.
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt ${WF_STEAM_APP_ID})
-add_custom_command(TARGET WorldFabric POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt $<TARGET_FILE_DIR:WorldFabric>
+# Runs on every build (no declared outputs), so the repo-root copy matches the most recently built preset
+# even when switching between presets whose exes are already up to date.
+add_custom_target(steam_appid
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt ${CMAKE_CURRENT_SOURCE_DIR}
     VERBATIM)
+add_dependencies(WorldFabric steam_appid)
 
 # The repo's include/ must come before the Vulkan SDK so its bundled SDL/GLM copies don't win.
 target_include_directories(WorldFabric PRIVATE
@@ -206,18 +209,17 @@ file(GLOB WF_SHADER_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/Narball/shader/*.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/Narball/shader/*.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/Narball/shader/*.comp)
+# No DEPFILE: Ninja ties depfile info to the output's timestamp, and every build dir writes these same .spv files,
+# so switching presets would recompile them all. Shaders don't #include anything yet; if they start to, add the
+# included files to DEPENDS.
 set(WF_SHADER_OUTPUTS)
 foreach(shader ${WF_SHADER_SOURCES})
     file(RELATIVE_PATH shader_rel ${CMAKE_CURRENT_SOURCE_DIR} ${shader})
     set(spv ${shader}.spv)
-    set(depfile ${CMAKE_CURRENT_BINARY_DIR}/shaders/${shader_rel}.d)
-    get_filename_component(depfile_dir ${depfile} DIRECTORY)
     add_custom_command(
         OUTPUT ${spv}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${depfile_dir}
-        COMMAND ${WF_GLSLC} -MD -MF ${depfile} ${shader} -o ${spv}
+        COMMAND ${WF_GLSLC} ${shader} -o ${spv}
         DEPENDS ${shader}
-        DEPFILE ${depfile}
         COMMENT "Compiling shader ${shader_rel}"
         VERBATIM)
     list(APPEND WF_SHADER_OUTPUTS ${spv})

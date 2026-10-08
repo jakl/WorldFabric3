@@ -42,12 +42,10 @@ In Visual Studio, set it under Project > CMake Settings, or in the cache editor.
 If assets fail to load when debugging, set the working directory to the repo root: in `.vs\launch.vs.json`, add `"currentDir": "${workspaceRoot}"` to the WorldFabric.exe configuration.
 
 ## Follow-up work
-State as of the move from `WorldFabric.vcxproj` to CMake. Both the `gcc-*` and `x64-*` (MSVC) presets build cleanly and the chess demo runs.
 
 ### Needs verification
 - **Visual Studio IDE debugging (F5) is untested.** The presets use the Ninja generator, which may ignore the `VS_DEBUGGER_WORKING_DIRECTORY` set in `CMakeLists.txt`. If so, the exe starts in `build\<preset>\` and can't find `./assets`. Either use the `launch.vs.json` workaround above, or make the app locate assets relative to the exe or repo root instead of the current directory.
 - **VR in GCC builds is untested on a headset.** See the OpenVR note under compiler compatibility below.
-- **Debug configuration changed.** The old Debug|x64 config defined `NDEBUG` and used whole-program optimization; CMake's Debug is a normal debug build, so `assert`s are now active. Restore the old flags in `CMakeLists.txt` if that was intentional.
 
 ### GCC/MSVC compatibility rules
 The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disagree on how C++ member functions return structs by value, so calling such a method on a Steam or OpenVR C++ interface from a GCC build returns garbage or crashes.
@@ -55,20 +53,11 @@ The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disa
 - **OpenVR:** `IVRSystem::GetProjectionMatrix` and `GetEyeToHeadTransform` use OpenVR's C function table (`FnTable:IVRSystem_022`) in non-MSVC builds (`OpenXRPlugin.cpp`). The `IVRSystemFnTablePrefix` struct mirrors the start of `VR_IVRSystem_FnTable` in `openvr_capi.h`; recheck it if the OpenVR headers are upgraded. New struct-returning OpenVR calls need the same treatment.
 - Calls returning integers, enums, `bool` or pointers, or filling output parameters, are safe with either compiler.
 
-### Cleanup candidates
-- **Keep variables initialized.** All members and locals in the project's own code (everything outside `include/`, `vk_mem_alloc.h` and VkBootstrap) now have initializers; this exposed an uninitialized draw-indirect buffer handle that crashed GCC builds and a `Board` constructor that initialized its position from itself. To check new code, run (from an MSYS2 UCRT64 shell, after configuring `gcc-release`; needs `mingw-w64-ucrt-x86_64-clang-tools-extra`):
-  ```
-  run-clang-tidy -p build/gcc-release -quiet \
-    -checks='-*,cppcoreguidelines-init-variables,cppcoreguidelines-pro-type-member-init' \
-    -header-filter='.*/(engine/header|header|Narball/header)/.*' -exclude-header-filter='.*(vk_mem_alloc|VkBootstrap).*' \
-    '^(?!.*(VkBootstrap|/include/)).*\.cpp$'
-  ```
-  A GCC build with `-Wuninitialized -Wmaybe-uninitialized` at `-O2` also catches reads of uninitialized values.
+### Cleanup notes and findings
+- clang-tidy can be used to automate code cleanup. It has already been used to initialize variables that were causing compile problems with gcc
+- Using GCC with `-Wuninitialized -Wmaybe-uninitialized` at `-O2` catches most uninitialized values.
 - **Missing return.** `Polynomial::operator[](const ComplexNumber&)` in `engine/header/Utilities.h` calls `apply(x)` but never returns a value (undefined behavior if called; GCC warns with `-Wreturn-type`). It should probably be `return apply(x);`.
 - **Fence-based destruction for the other GPU resources.** `TriangleModel`'s indirect draw buffers go through `VulkanPlugin::destroyAfterGPU`, which frees them only after the render fence proves their frame finished (`completed_frame`). The other queues in `VulkanPlugin::run` (VMA buffers, images, samplers, descriptor sets) still rely on timing heuristics (`millis_to_hold_buffer` and `frames_to_hold_buffer`). Buffers used by off-thread `immediateSubmit` work would need their own tracking before they can switch over. Also, the Vulkan device is never torn down at exit, so nothing flushes these queues on shutdown.
 - **Unused libraries.** `CMakeLists.txt` links every `.lib` the old project did, but the exe only imports `SDL3`, `SDL3_ttf`, `OpenAL32`, `openvr_api`, `steam_api64` and `vulkan-1`. `glew32`, `OpenGL32`, `SDL3_image/mixer/net/rtf`, `SDL3_test`, `glew32s` and `sdkencryptedappticket64` could likely be dropped.
 - **Unused DLLs.** All of `dll/` is copied next to the exe. `SDL2.dll`, `freeglut.dll`, `glfw3.dll`, `glew32.dll`, `steam_api.dll` (32-bit) and the SDL3 extension DLLs aren't imported. `ucrtbase.dll` shouldn't be redistributed this way; it ships with Windows.
-- **The panel pass decides which image is presented.** `shader/PanelPost.comp` (formerly Narball's version) blurs `final_image` under panels and writes the composited frame into `color`. Every render target therefore has to present `color_image`, as `createRenderTarget` does in both `source/Main.cpp` and `Narball/header/NarballMain.h`. A target that presents `final_image` would show the scene without panels. Renaming the images to match their roles, or making the presented image a `PanelPlugin` setting, would make this less surprising.
-- **Shared panel shaders not checked in every app.** The panel shaders now come from Narball. Chess and Narball were checked visually. Other demo apps that draw panels may look slightly different: transparent pixels are discarded, and the background blur is 5 taps instead of 49.
-- **Only some apps have been run.** The `WF_APP` switch was smoke-tested with `Chess`, `Narball` and `Pyramid`. The other demo states compile but haven't been launched since the CMake move.
-- **No CI.** A Windows CI job building both `gcc-release` and `x64-release` would catch the kind of MSVC-only code that broke the GCC build.
+- **The panel pass decides which image is presented.** `shader/PanelPost.comp` (formerly Narball's version) blurs `final_image` under panels and writes the composited frame into `color`. Every render target therefore has to present `color_image`, as `createRenderTarget` does in both `source/Main.cpp` and `Narball/header/NarballMain.h`. A target that presents `final_image` would show the scene without panels.

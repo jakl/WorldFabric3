@@ -67,7 +67,7 @@ std::shared_ptr<RenderTarget> createRenderTarget(int width, int height, VulkanPl
 
 	std::shared_ptr<RenderTarget> target = std::shared_ptr<RenderTarget>(new RenderTarget());
 
-	target->setImages({ color_image, normal_image, point_image,final_image, panel_image }, { background_color, background_normal, background_point, start_light, panel_background }, depth_image, final_image);
+	target->setImages({ color_image, normal_image, point_image,final_image, panel_image }, { background_color, background_normal, background_point, start_light, panel_background }, depth_image, color_image); // PanelPost composites final_image (blurred under panels) back into color_image
 	target->createExtendedFragments(4,8,window);
 	target->enableScreenResize(true) ;
 	return target;

@@ -1,8 +1,8 @@
 # Narball
 ## Building with CMake
-Requires CMake 3.24+ and Ninja. The Vulkan SDK is optional; if it isn't found, the Vulkan headers are downloaded automatically.
+Requires CMake 3.24+, Ninja and the `glslc` shader compiler. `glslc` comes with the Vulkan SDK, or with MSYS2's `shaderc` package. The rest of the Vulkan SDK is optional: if it isn't found, the Vulkan headers are downloaded automatically.
 
-GCC (MSYS2 UCRT64, `pacman -S mingw-w64-ucrt-x86_64-{gcc,cmake,ninja}`):
+GCC (MSYS2 UCRT64, `pacman -S mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,shaderc}`):
 ```
 cmake --preset gcc-release
 cmake --build --preset gcc-release
@@ -16,7 +16,7 @@ cmake --build --preset x64-release
 
 Run from the repo root so `./assets` and `./Narball` resolve, e.g. `build\gcc-release\WorldFabric.exe`, or `cmake --build --preset gcc-release --target run`. The DLLs from `dll/` are copied next to the exe automatically.
 
-Shaders (`*.vert`, `*.frag` and `*.comp` in `shader/` and `Narball/shader/`) are compiled with `glslc` from the Vulkan SDK. Each `.spv` is written next to its source, because that's where the app loads it from. Only edited shaders are recompiled, and new shader files are picked up automatically. Build just the shaders with `cmake --build --preset gcc-release --target shaders`. If `glslc` isn't found, or you configure with `-DWF_COMPILE_SHADERS=OFF`, the committed `.spv` files are used as-is. The `.spv` files are build outputs, so a CMake `clean` deletes them, and the next build regenerates them.
+Shaders (`*.vert`, `*.frag` and `*.comp` in `shader/` and `Narball/shader/`) are compiled with `glslc`. Each `.spv` is written next to its source, because that's where the app loads it from. The `.spv` files are gitignored, so a fresh clone has to be built before it can run. Only edited shaders are recompiled, and new shader files are picked up automatically. Build just the shaders with `cmake --build --preset gcc-release --target shaders`. If `glslc` isn't on `PATH` or in the Vulkan SDK, set `-DWF_GLSLC=<path to glslc.exe>`.
 
 ### Choosing the app
 The `WF_APP` cache variable picks what the exe starts (default `Chess`). Changing it recompiles only `source/Main.cpp`:
@@ -68,7 +68,7 @@ The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disa
 - **Fence-based destruction for the other GPU resources.** `TriangleModel`'s indirect draw buffers go through `VulkanPlugin::destroyAfterGPU`, which frees them only after the render fence proves their frame finished (`completed_frame`). The other queues in `VulkanPlugin::run` (VMA buffers, images, samplers, descriptor sets) still rely on timing heuristics (`millis_to_hold_buffer` and `frames_to_hold_buffer`). Buffers used by off-thread `immediateSubmit` work would need their own tracking before they can switch over. Also, the Vulkan device is never torn down at exit, so nothing flushes these queues on shutdown.
 - **Unused libraries.** `CMakeLists.txt` links every `.lib` the old project did, but the exe only imports `SDL3`, `SDL3_ttf`, `OpenAL32`, `openvr_api`, `steam_api64` and `vulkan-1`. `glew32`, `OpenGL32`, `SDL3_image/mixer/net/rtf`, `SDL3_test`, `glew32s` and `sdkencryptedappticket64` could likely be dropped.
 - **Unused DLLs.** All of `dll/` is copied next to the exe. `SDL2.dll`, `freeglut.dll`, `glfw3.dll`, `glew32.dll`, `steam_api.dll` (32-bit) and the SDL3 extension DLLs aren't imported. `ucrtbase.dll` shouldn't be redistributed this way; it ships with Windows.
-- **Retire the `compile_shaders.bat` scripts.** CMake now compiles every shader, so `shader/compile_shaders.bat` and `Narball/shader/compile_shaders.bat` are redundant. They had already drifted: neither listed `sky.comp` or `colored_triangle.vert`, and `GLTFShadow.frag.spv` hadn't been rebuilt since the "Fix shadow offset" commit.
-- **Shared shaders are duplicated.** Most files in `Narball/shader` have a same-named copy in `shader/` (for example, the two `GLTFShadow.frag` files are identical). A shared directory, or `#include` files (CMake already tracks includes through depfiles), would stop them drifting apart.
+- **The panel pass decides which image is presented.** `shader/PanelPost.comp` (formerly Narball's version) blurs `final_image` under panels and writes the composited frame into `color`. Every render target therefore has to present `color_image`, as `createRenderTarget` does in both `source/Main.cpp` and `Narball/header/NarballMain.h`. A target that presents `final_image` would show the scene without panels. Renaming the images to match their roles, or making the presented image a `PanelPlugin` setting, would make this less surprising.
+- **Shared panel shaders not checked in every app.** The panel shaders now come from Narball. Chess and Narball were checked visually. Other demo apps that draw panels may look slightly different: transparent pixels are discarded, and the background blur is 5 taps instead of 49.
 - **Only some apps have been run.** The `WF_APP` switch was smoke-tested with `Chess`, `Narball` and `Pyramid`. The other demo states compile but haven't been launched since the CMake move.
 - **No CI.** A Windows CI job building both `gcc-release` and `x64-release` would catch the kind of MSVC-only code that broke the GCC build.

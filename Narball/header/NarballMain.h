@@ -174,16 +174,16 @@ inline ScenePlugin* setUpScene(VulkanPlugin* window, OpenXRPlugin* xr) {
 	lc.light_color = glm::vec4(0.7, 0.7, 0.7, 1);
 	scene->createLight<ScenePlugin::ScreenPushConstants, NarballLightComponent>(glm::vec3(-5, 15, -5), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), 0.55f, 30, 1024, 0, lc);
 
-	auto shaders1 = loadSceneShader(scene, window, "./Narball/shader/GLTF1.vert.spv", "./Narball/shader/GLTF.frag.spv", "./Narball/shader/GLTFShadow1.vert.spv", "./Narball/shader/GLTFShadow.frag.spv");
+	auto shaders1 = loadSceneShader(scene, window, "./shader/GLTF1.vert.spv", "./shader/GLTF.frag.spv", "./shader/GLTFShadow1.vert.spv", "./shader/GLTFShadow.frag.spv");
 	scene->addDefaultShader<ScenePlugin::DefaultPushConstants, GLTF::Instance1>(shaders1.first, shaders1.second, 1);
 
-	auto shaders64 = loadSceneShader(scene, window, "./Narball/shader/GLTF64.vert.spv", "./Narball/shader/GLTF.frag.spv", "./Narball/shader/GLTFShadow64.vert.spv", "./Narball/shader/GLTFShadow.frag.spv");
+	auto shaders64 = loadSceneShader(scene, window, "./shader/GLTF64.vert.spv", "./shader/GLTF.frag.spv", "./shader/GLTFShadow64.vert.spv", "./shader/GLTFShadow.frag.spv");
 	scene->addDefaultShader<ScenePlugin::DefaultPushConstants, GLTF::Instance64>(shaders64.first, shaders64.second, 64);
 
-	auto shaders256 = loadSceneShader(scene, window, "./Narball/shader/GLTF256.vert.spv", "./Narball/shader/GLTF.frag.spv", "./Narball/shader/GLTFShadow256.vert.spv", "./Narball/shader/GLTFShadow.frag.spv");
+	auto shaders256 = loadSceneShader(scene, window, "./shader/GLTF256.vert.spv", "./shader/GLTF.frag.spv", "./shader/GLTFShadow256.vert.spv", "./shader/GLTFShadow.frag.spv");
 	scene->addDefaultShader<ScenePlugin::DefaultPushConstants, GLTF::Instance256>(shaders256.first, shaders256.second, 256);
 /*
-	auto shadersblend1 = loadTranslucentSceneShader(scene, window, "./Narball/shader/GLTF1Blend.vert.spv", "./Narball/shader/GLTFBlend.frag.spv", "./Narball/shader/GLTFShadowBlend1.vert.spv", "./Narball/shader/GLTFShadowBlend.frag.spv");
+	auto shadersblend1 = loadTranslucentSceneShader(scene, window, "./shader/GLTF1Blend.vert.spv", "./shader/GLTFBlend.frag.spv", "./shader/GLTFShadowBlend1.vert.spv", "./shader/GLTFShadowBlend.frag.spv");
 	scene->addDefaultShader<ScenePlugin::TranslucentPushConstants, GLTF::Instance1>(shadersblend1.first, shadersblend1.second, 1, true);
 */
 	return scene;
@@ -201,9 +201,9 @@ inline PanelPlugin* setUpPanels(VulkanPlugin* window) {
 	example_target->setImages({ color_image }, { {0,0,0,1} }, depth_image, color_image);
 
 	// Load the shader for drawing elements into panels
-	Variant vertex_shader_file_data2 = Variant::loadFileBytes("./Narball/shader/PanelElement.vert.spv");
+	Variant vertex_shader_file_data2 = Variant::loadFileBytes("./shader/PanelElement.vert.spv");
 	VkShaderModule triangleVertexShader2 = window->loadShader(vertex_shader_file_data2.getByteArray(), vertex_shader_file_data2.getArrayLength());
-	Variant frag_shader_file_data2 = Variant::loadFileBytes("./Narball/shader/PanelElement.frag.spv");
+	Variant frag_shader_file_data2 = Variant::loadFileBytes("./shader/PanelElement.frag.spv");
 	VkShaderModule triangleFragShader2 = window->loadShader(frag_shader_file_data2.getByteArray(), frag_shader_file_data2.getArrayLength());
 	int num_textures = 1;
 	auto element_program = std::shared_ptr<TriangleShaderProgram>(new TriangleShaderProgram(
@@ -220,9 +220,9 @@ inline PanelPlugin* setUpPanels(VulkanPlugin* window) {
 	vkDestroyShaderModule(window->device, triangleVertexShader2, nullptr);
 
 	// Load the shader for drawing the panels in 3D
-	Variant vertex_shader_file_data = Variant::loadFileBytes("./Narball/shader/Panel.vert.spv");
+	Variant vertex_shader_file_data = Variant::loadFileBytes("./shader/Panel.vert.spv");
 	VkShaderModule triangleVertexShader = window->loadShader(vertex_shader_file_data.getByteArray(), vertex_shader_file_data.getArrayLength());
-	Variant frag_shader_file_data = Variant::loadFileBytes("./Narball/shader/Panel.frag.spv");
+	Variant frag_shader_file_data = Variant::loadFileBytes("./shader/Panel.frag.spv");
 	VkShaderModule triangleFragShader = window->loadShader(frag_shader_file_data.getByteArray(), frag_shader_file_data.getArrayLength());
 	num_textures = 1;
 	auto panel_program = std::shared_ptr<TriangleShaderProgram>(new TriangleShaderProgram(
@@ -239,7 +239,7 @@ inline PanelPlugin* setUpPanels(VulkanPlugin* window) {
 	vkDestroyShaderModule(window->device, triangleVertexShader, nullptr);
 
 	//load the shader for composing the drawn panels over the final screen image
-	Variant screen_file_data = Variant::loadFileBytes("./Narball/shader/PanelPost.comp.spv");
+	Variant screen_file_data = Variant::loadFileBytes("./shader/PanelPost.comp.spv");
 	VkShaderModule computeShader = window->loadShader(screen_file_data.getByteArray(), screen_file_data.getArrayLength());
 	std::shared_ptr<ScreenShaderProgram> screen_program = std::shared_ptr<ScreenShaderProgram>(new ScreenShaderProgram(window->device, computeShader, sizeof(PanelPlugin::ScreenPushConstants), window->window_target->images, 16));
 
@@ -302,8 +302,8 @@ inline void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, con
 		render_targets.insert(right_eye_target);
 	}
 
-	Variant vertex_shader_file_data = Variant::loadFileBytes("./Narball/shader/VulkanParticle.vert.spv");
-	Variant frag_shader_file_data = Variant::loadFileBytes("./Narball/shader/VulkanParticle.frag.spv");
+	Variant vertex_shader_file_data = Variant::loadFileBytes("./shader/VulkanParticle.vert.spv");
+	Variant frag_shader_file_data = Variant::loadFileBytes("./shader/VulkanParticle.frag.spv");
 	std::shared_ptr<ParticlePlugin> particles(new ParticlePlugin(window.get(), 2000, vertex_shader_file_data, frag_shader_file_data, render_targets));
 	addTool(particles);
 	std::shared_ptr<ScenePlugin> scene(setUpScene( window.get(), openXR.get())) ;

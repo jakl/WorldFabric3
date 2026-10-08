@@ -39,12 +39,25 @@ In Visual Studio, set it under Project > CMake Settings, or in the cache editor.
 2. File > Open > Folder and select the repo root.
 3. Pick "MSVC x64 Release" (or Debug) from the configuration dropdown, then build and run WorldFabric.exe.
 
-If assets fail to load when debugging, set the working directory to the repo root: in `.vs\launch.vs.json`, add `"currentDir": "${workspaceRoot}"` to the WorldFabric.exe configuration.
+Debug with the repo root as the working directory, or shaders and assets won't load. Visual Studio's Open Folder mode starts the exe in `build\<preset>\`. To change that, create `.vs\launch.vs.json` (it's per-user and gitignored):
+```json
+{
+  "version": "0.2.1",
+  "configurations": [
+    { "type": "default", "project": "CMakeLists.txt", "projectTarget": "WorldFabric.exe",
+      "name": "WorldFabric.exe", "currentDir": "${workspaceRoot}" }
+  ]
+}
+```
+
+### Steam during development
+`SteamworksPlugin` calls `SteamAPI_RestartAppIfNecessary`. If the exe wasn't launched by Steam, that call relaunches the game through the Steam client and the app quits, unless `steam_appid.txt` is in the working directory. CMake writes that file, with the Steam app ID for the selected `WF_APP`, to both the repo root and the exe's folder. That's 4404880 for the Narball apps and 3485250 for everything else. The file is gitignored. **Never ship `steam_appid.txt`.** In a release, the relaunch is what makes players start the game through Steam.
 
 ## Follow-up work
 
 ### Needs verification
-- **Visual Studio IDE debugging (F5) is untested.** The presets use the Ninja generator, which may ignore the `VS_DEBUGGER_WORKING_DIRECTORY` set in `CMakeLists.txt`. If so, the exe starts in `build\<preset>\` and can't find `./assets`. Either use the `launch.vs.json` workaround above, or make the app locate assets relative to the exe or repo root instead of the current directory.
+- **Visual Studio IDE debugging (F5) is untested.** The presets use the Ninja generator, which may ignore the `VS_DEBUGGER_WORKING_DIRECTORY` set in `CMakeLists.txt`. If so, the exe starts in `build\<preset>\` and can't find `./assets`. Either use the `launch.vs.json` above, or make the app locate assets relative to the exe or repo root instead of the current directory.
+- **Steam app IDs are duplicated.** CMake's `WF_STEAM_APP_ID` (used for `steam_appid.txt`) has to match the IDs hard-coded in the `SteamworksPlugin` constructors in `source/Main.cpp` and `Narball/header/NarballMain.h`. Passing `WF_STEAM_APP_ID` to the code as a define would leave a single source for each ID.
 - **VR in GCC builds is untested on a headset.** See the OpenVR note under compiler compatibility below.
 
 ### GCC/MSVC compatibility rules

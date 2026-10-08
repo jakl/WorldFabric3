@@ -124,6 +124,20 @@ message(STATUS "WorldFabric app: ${WF_APP} (change with -DWF_APP=<name>)")
 # Only Main.cpp sees the define, so switching apps recompiles just that file.
 set_property(SOURCE source/Main.cpp APPEND PROPERTY COMPILE_DEFINITIONS "WF_APP=\"${WF_APP}\"")
 
+# Without steam_appid.txt in the working directory, SteamAPI_RestartAppIfNecessary relaunches the app through
+# Steam and quits. It's written to the repo root and next to the exe, and must never ship with a release.
+# These IDs must match the ones passed to SteamworksPlugin in source/Main.cpp and Narball/header/NarballMain.h.
+if(WF_APP MATCHES "^Narball")
+    set(WF_STEAM_APP_ID 4404880)
+else()
+    set(WF_STEAM_APP_ID 3485250)
+endif()
+file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt ${WF_STEAM_APP_ID})
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt ${WF_STEAM_APP_ID})
+add_custom_command(TARGET WorldFabric POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt $<TARGET_FILE_DIR:WorldFabric>
+    VERBATIM)
+
 # The repo's include/ must come before the Vulkan SDK so its bundled SDL/GLM copies don't win.
 target_include_directories(WorldFabric PRIVATE
     engine/header

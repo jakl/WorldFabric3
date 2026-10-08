@@ -523,10 +523,8 @@ public:
 		}
 		std::shared_ptr <VulkanBuffer> staging = createVulkanBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 			
-		void* staging_data = nullptr;
-		vmaMapMemory(VMA_allocator, staging->allocation, &staging_data);
-
-		memcpy(staging_data, input_data.data(), buffer_size);// copy vertex buffer into staging
+		// createVulkanBuffer makes every buffer persistently mapped; a vmaMapMemory here would need a matching unmap before destruction
+		memcpy(staging->info.pMappedData, input_data.data(), buffer_size);// copy vertex buffer into staging
 
 		// move from staging to given buffer
 		VkBufferCopy data_copy{ 0 };

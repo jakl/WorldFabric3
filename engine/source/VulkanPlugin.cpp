@@ -620,16 +620,7 @@ void VulkanPlugin::destroyFinishedGPUBuffers(){
 }
 
 void VulkanPlugin::destroyBuffer(BufferToDestroy& buffer){
-
-	VmaAllocationInfo allocInfo;
-	vmaGetAllocationInfo(VMA_allocator, buffer.allocation, &allocInfo);
-
-	if (allocInfo.pMappedData != nullptr) {
-		// The memory is currently mapped
-		//vmaUnmapMemory(VMA_allocator, buffer.allocation);
-	}
-
-
+	// Buffers are persistently mapped (VMA_ALLOCATION_CREATE_MAPPED_BIT), so VMA unmaps them itself on destruction
 	vmaDestroyBuffer(VMA_allocator, buffer.buffer, buffer.allocation);
 }
 

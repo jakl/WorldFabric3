@@ -38,7 +38,7 @@ The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disa
 - Calls returning integers, enums, `bool` or pointers, or filling output parameters, are safe with either compiler.
 
 ### Cleanup candidates
-- **Uninitialized Vulkan handles.** `TriangleModel`'s draw-indirect buffer handles in `engine/header/VulkanPlugin.h` were uninitialized and crashed GCC builds; they're now `VK_NULL_HANDLE`. Many other `Vk*` members in that header have no initializer. They're assigned during init today, but initializing them would prevent similar bugs.
+- **Other uninitialized members.** All Vulkan/VMA handle members in `VulkanPlugin.h` and `vk_types.h` now default to `VK_NULL_HANDLE`/`nullptr` (an uninitialized draw-indirect buffer handle crashed GCC builds). Non-handle members such as `VulkanBuffer::device_address`, `VkFormat`/`VkExtent` fields and many plain `int`s in the engine still have no initializer.
 - **Indirect-buffer lifetime.** `TriangleModel::render` destroys the previous indirect draw buffer one update later, "in case it's in use". That doesn't guarantee the GPU has finished with it. Tie destruction to a frame fence instead.
 - **Unused libraries.** `CMakeLists.txt` links every `.lib` the old project did, but the exe only imports `SDL3`, `SDL3_ttf`, `OpenAL32`, `openvr_api`, `steam_api64` and `vulkan-1`. `glew32`, `OpenGL32`, `SDL3_image/mixer/net/rtf`, `SDL3_test`, `glew32s` and `sdkencryptedappticket64` could likely be dropped.
 - **Unused DLLs.** All of `dll/` is copied next to the exe. `SDL2.dll`, `freeglut.dll`, `glfw3.dll`, `glew32.dll`, `steam_api.dll` (32-bit) and the SDL3 extension DLLs aren't imported. `ucrtbase.dll` shouldn't be redistributed this way; it ships with Windows.

@@ -33,16 +33,16 @@ class RenderTarget;
 
 // This structs are just used to hold the GPU pointers that need to be destroyed when the image and buffer get deleted
 struct ImageToDestroy{
-	VkImage image;
-	VkImageView imageView;
-	VmaAllocation allocation;
+	VkImage image = VK_NULL_HANDLE;
+	VkImageView imageView = VK_NULL_HANDLE;
+	VmaAllocation allocation = nullptr;
 	int frame = 0;
 	std::chrono::high_resolution_clock::time_point time;
 };
 
 struct BufferToDestroy{
-	VkBuffer buffer;
-	VmaAllocation allocation;
+	VkBuffer buffer = VK_NULL_HANDLE;
+	VmaAllocation allocation = nullptr;
 	int frame = 0 ;
 	std::chrono::high_resolution_clock::time_point time ;
 };
@@ -68,8 +68,8 @@ class VulkanImage {
 
 class VulkanBuffer {
 	public:
-		VkBuffer buffer;
-		VmaAllocation allocation;
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VmaAllocation allocation = nullptr;
 		VmaAllocationInfo info;
 		VkDeviceAddress device_address; // can be used as apointer in shaders, will be set only if the buffer is flagged for shader use
 		uint32_t object_count = 0;// will be set when pushing structs with pushBufferData
@@ -114,7 +114,7 @@ private:
 
 	bool needs_sampler = false;
 	bool has_sampler = false;
-	VkSampler texture_sampler;
+	VkSampler texture_sampler = VK_NULL_HANDLE;
 	VkSamplerCreateInfo sampler_info{};
 
 } ;
@@ -158,9 +158,9 @@ class TriangleShaderProgram{
 			vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(T), &push_constants);
 		}
 	private:
-		VkPipelineLayout layout;
-		VkPipeline pipeline;
-		VkDevice device;
+		VkPipelineLayout layout = VK_NULL_HANDLE;
+		VkPipeline pipeline = VK_NULL_HANDLE;
+		VkDevice device = VK_NULL_HANDLE;
 		int num_color_attachments ; // triangle shaders don't have to attach all rrender target images
 };
 
@@ -195,12 +195,12 @@ public:
 	void updateImageSize(int w, int h);
 
 	
-	VkDescriptorSet image_descriptors;
+	VkDescriptorSet image_descriptors = VK_NULL_HANDLE;
 private:
-	VkPipelineLayout layout;
-	VkPipeline pipeline;
-	VkDevice device;
-	VkDescriptorSetLayout descriptor_layout;
+	VkPipelineLayout layout = VK_NULL_HANDLE;
+	VkPipeline pipeline = VK_NULL_HANDLE;
+	VkDevice device = VK_NULL_HANDLE;
+	VkDescriptorSetLayout descriptor_layout = VK_NULL_HANDLE;
 	int local_size ; 
 	int image_width ;
 	int image_height ;
@@ -308,13 +308,13 @@ public:
 	int next_renderable_id = 1 ;
 
 	//handles for Vulkan
-	VkDevice device;
-	VkInstance vulkan_instance;
-	VkDebugUtilsMessengerEXT debug_messenger;
-	VkPhysicalDevice physical_device;
-	VmaAllocator VMA_allocator;
+	VkDevice device = VK_NULL_HANDLE;
+	VkInstance vulkan_instance = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+	VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+	VmaAllocator VMA_allocator = nullptr;
 
-	VkQueue vulkan_queue;
+	VkQueue vulkan_queue = VK_NULL_HANDLE;
 	uint32_t vulkan_queue_family;
 
 	//TODO make private?
@@ -565,8 +565,8 @@ private:
 	int typing_cursor = 0;
 	std::string typed_text ;
 	
-	VkSurfaceKHR SDL_vulkan_surface;
-	VkSwapchainKHR swapchain;
+	VkSurfaceKHR SDL_vulkan_surface = VK_NULL_HANDLE;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkFormat swapchainImageFormat;
 	VkExtent2D swapchainExtent;
 	vkb::Swapchain vkbSwapchain ;
@@ -574,14 +574,14 @@ private:
 	std::vector<VkImage> swapchainImages;
 	std::vector<VkImageView> swapchainImageViews;
 
-	VkDescriptorSet draw_image_descriptors;
-	VkDescriptorSetLayout draw_image_descriptor_layout;
+	VkDescriptorSet draw_image_descriptors = VK_NULL_HANDLE;
+	VkDescriptorSetLayout draw_image_descriptor_layout = VK_NULL_HANDLE;
 
 	vkb::Swapchain swap_chain ;
 
 	static const int MAX_DESCRIPTORS_PER_POOL = 1 ;
 	struct PoolWithInfo{
-		VkDescriptorPool pool ;
+		VkDescriptorPool pool = VK_NULL_HANDLE;
 		int image_count= -1 ; // number of images in binding also pool_sizes size
 		int used_descriptors = 0 ;
 		VkDescriptorType type;
@@ -594,21 +594,21 @@ private:
 	std::unordered_set< std::shared_ptr<RenderTarget>> active_targets;
 
 	// immediate submit structures
-	VkFence main_fence ;
-	VkCommandBuffer command_buffer ;
-	VkCommandPool command_pool ;
+	VkFence main_fence = VK_NULL_HANDLE;
+	VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+	VkCommandPool command_pool = VK_NULL_HANDLE;
 
 	int max_time_stamps = 40 ;
 	VkQueryPoolCreateInfo queryPoolInfo{};
-	VkQueryPool timestamp_query_pool;
+	VkQueryPool timestamp_query_pool = VK_NULL_HANDLE;
 
 
 	struct FrameData {
-		VkSemaphore swapchain_semaphore, render_semaphore;
-		VkFence acquire_fence ;
-		VkFence render_fence;
-		VkCommandPool command_pool;
-		VkCommandBuffer main_command_buffer;
+		VkSemaphore swapchain_semaphore = VK_NULL_HANDLE, render_semaphore = VK_NULL_HANDLE;
+		VkFence acquire_fence = VK_NULL_HANDLE;
+		VkFence render_fence = VK_NULL_HANDLE;
+		VkCommandPool command_pool = VK_NULL_HANDLE;
+		VkCommandBuffer main_command_buffer = VK_NULL_HANDLE;
 
 	};
 

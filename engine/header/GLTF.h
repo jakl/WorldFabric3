@@ -38,14 +38,14 @@ class GLTF : public OptimizationProblem, public TableInterface {
             glm::vec3 transformed_position = { 0,0,0 }; // position in linear skin local space
             glm::vec3 transformed_normal = { 0,0,0 }; //notmal in linjear skin local space
             
-			std::vector<glm::vec3> morph_position ; // inex here aligns with morph names on the GLTF
+			std::vector<glm::vec3> morph_position ; // index here aligns with morph names on the GLTF
 			std::vector<glm::vec3> morph_normal ;
         };
 
         struct Triangle{
-            int A;
-            int B;
-            int C;
+            int A = 0;
+            int B = 0;
+            int C = 0;
             int material = -1;
         };
 
@@ -80,10 +80,10 @@ class GLTF : public OptimizationProblem, public TableInterface {
             glm::vec3 base_scale = {1.0f,1.0f,1.0f};
             glm::vec3 base_translation = {0.0f, 0.0f, 0.0f};
 
-            glm::mat4 mesh_to_bone ; //transform from starting coordinates into bone space
-            glm::mat4 bone_to_mesh ;
-            glm::mat4 transform ; // combines model position, inverse, and current node transform for vertex manipulation from base coordinates
-            glm::mat4 bone_to_model ; // maps coordinate in bone space to model's space
+            glm::mat4 mesh_to_bone{} ; //transform from starting coordinates into bone space
+            glm::mat4 bone_to_mesh{} ;
+            glm::mat4 transform{} ; // combines model position, inverse, and current node transform for vertex manipulation from base coordinates
+            glm::mat4 bone_to_model{} ; // maps coordinate in bone space to model's space
 			float stiffness = 1.0f ; // How hard this node is to move with IK
             float animation_weight = 1.0f; // When a pose is generated from an animation this is how much the animation affected this bone
         };
@@ -105,11 +105,11 @@ class GLTF : public OptimizationProblem, public TableInterface {
 
         struct Pin{
             std::string name = "";
-            int bone ;
-            glm::vec3 local_point;
-            glm::vec3 target;
+            int bone = 0 ;
+            glm::vec3 local_point{};
+            glm::vec3 target{};
             float weight = 1.0f ;
-            glm::quat rot_target;
+            glm::quat rot_target{};
             float rot_weight = 1.0f ;
         };
 
@@ -117,6 +117,7 @@ class GLTF : public OptimizationProblem, public TableInterface {
 		struct alignas(16) BufferVertex{
 			alignas(16) glm::vec3 position = { 0, 0, 0 }; // position in global space
 			alignas(16) glm::vec3 normal = { 0, 0, 0 }; // normal in global space
+			alignas(16) glm::vec4 color = { 1, 1, 1, 1 };
 			alignas(16) glm::vec2 tex_coord = { 0, 0 };
 
 			alignas(16) glm::ivec4 joints = { 0,0,0,0 }; // Nodes this vertex is skinned to if any
@@ -133,17 +134,17 @@ class GLTF : public OptimizationProblem, public TableInterface {
 
 
 		struct alignas(16) Instance256{
-			alignas(16) glm::mat4 root;
-			alignas(16) glm::mat4 bone_pose[256]; // NOTE: this length must match the fixed value in the shader even if there are fewer bones!
+			alignas(16) glm::mat4 root{};
+			alignas(16) glm::mat4 bone_pose[256]{}; // NOTE: this length must match the fixed value in the shader even if there are fewer bones!
 		};
 
 		struct alignas(16) Instance64 {
-			alignas(16) glm::mat4 root;
-			alignas(16) glm::mat4 bone_pose[64]; // NOTE: this length must match the fixed value in the shader even if there are fewer bones!
+			alignas(16) glm::mat4 root{};
+			alignas(16) glm::mat4 bone_pose[64]{}; // NOTE: this length must match the fixed value in the shader even if there are fewer bones!
 		};
 
 		struct alignas(16) Instance1 {
-			alignas(16) glm::mat4 root;
+			alignas(16) glm::mat4 root{};
 		};
 
 
@@ -153,7 +154,7 @@ class GLTF : public OptimizationProblem, public TableInterface {
 			float radius = 0 ;
 			float stiffness = 0 ;
 			float drag = 0 ;
-			glm::vec3 gravity ;
+			glm::vec3 gravity{} ;
 
 		};
 	
@@ -165,7 +166,7 @@ class GLTF : public OptimizationProblem, public TableInterface {
 
 		struct SphereCollider{
 			int node = -1;
-			glm::vec3 offset ;
+			glm::vec3 offset{} ;
 			float radius  = 0;
 		};
 
@@ -181,7 +182,7 @@ class GLTF : public OptimizationProblem, public TableInterface {
         std::vector<Node> nodes ;
         std::vector<int> root_nodes ;
         std::vector<Node> original_pose;
-        glm::mat4 transform;
+        glm::mat4 transform{};
         std::vector<Animation> animations;
 		std::vector<std::string> morph_names ;// maps index to name of morph targets
 		std::vector<int> morph_triangles ; // A list of all triangles that contain morphs on any vertices (computed on demand)
@@ -189,8 +190,8 @@ class GLTF : public OptimizationProblem, public TableInterface {
         //VRM extension for avatar binding
 		int VRM_version = -1 ; // -1 means non, then there are 0 and 1 versions
         std::map<std::string,int> human_bone ;
-        int first_person_bone ;
-        glm::vec3 first_person_offset;
+        int first_person_bone = 0 ;
+        glm::vec3 first_person_offset{};
         bool boneless = false; // if set to true bones will be ignored in shader (improves performance for unrigged models)
 
 		//VR extension for Spring bones
@@ -213,12 +214,12 @@ class GLTF : public OptimizationProblem, public TableInterface {
         std::vector<Triangle> triangles ; 
         std::map<int,Material> materials;
         std::map<int,Image> images;
-        glm::vec3 min; // minimum values in each axis part of AABB
-        glm::vec3 max; // maximum values in each axis part of AABB
+        glm::vec3 min{}; // minimum values in each axis part of AABB
+        glm::vec3 max{}; // maximum values in each axis part of AABB
         bool position_changed = false;
         bool model_changed = false;
         bool bones_changed = false;
-        int last_traced_tri ; // Index of last triangle hit by raytrace
+        int last_traced_tri = 0 ; // Index of last triangle hit by raytrace
 
         int buffer_stopped_material_index = 0; // if buffer collection fails due to memory limits this is where it should pick up 
         // Constructor
@@ -270,7 +271,7 @@ class GLTF : public OptimizationProblem, public TableInterface {
 		void setBoundingBoxModel(const glm::vec3& min, const glm::vec3& max, const glm::vec4 color);
 
         // Sets the model to a polyhedron of the given color (Can be used to generate visuals for ConvexShape objects)
-        void setPolyhedronModel(std::vector<glm::vec3>& vertices, std::vector<std::vector<int>>& faces, glm::vec3 color);
+        void setPolyhedronModel(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<int>>& faces, glm::vec4 color);
 
         void addPrimitive(std::vector<Vertex>& vertices, std::vector<Triangle>& triangles,
             Variant& primitive, int node_id, const glm::mat4& transform, Variant& json, const Variant& bin);

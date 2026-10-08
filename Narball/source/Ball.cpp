@@ -260,7 +260,7 @@ Ball BallView::getView(std::shared_ptr<const Ball>& observed) {
 			return view;
 		}
 
-		glm::vec3 view_position;
+		glm::vec3 view_position{};
 		glm::vec3 last_position = last_view.position + observed->velocity * last_age;
 		glm::vec3 observed_position = observed->position + observed->velocity * observation_age;
 

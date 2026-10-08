@@ -27,6 +27,8 @@ class NarballMenu : public MachineState, public PanelPlugin::PanelListener, publ
 
 public:
 
+	static inline bool local_debug_mode = false ;
+	int port = 4225 ;
 	
 	static inline int64_t lobby_id = -1 ; // fetched on host or join
 	static inline bool has_player = false;
@@ -89,7 +91,7 @@ private:
 	std::chrono::high_resolution_clock::time_point last_run_time;
 	std::chrono::high_resolution_clock::time_point current_time;
 
-	int beach_id;
+	int beach_id = 0;
 
 	
 

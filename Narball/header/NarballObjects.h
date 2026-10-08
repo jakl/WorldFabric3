@@ -26,7 +26,7 @@ const inline std::string ball_model = "beach_ball";
 const inline std::string pool_model = "pool";
 const inline std::string beach_model = "beach";
 
-const inline std::string NARBALL_VERSION = "v0.100" ;
+const inline std::string NARBALL_VERSION = "v0.104" ;
 const inline std::string NARBALL_DEDICATED_VERSION = "1.0.0.0"; // Needs to match the Steamworks setting to make servers visible
 
 
@@ -236,9 +236,9 @@ public:
 
 // The parameters for the the Narball post processintg shader
 struct NarballLightComponent {
-	glm::vec4 light_position;
-	glm::vec4 light_color;
-	glm::mat4 light_matrix;
+	glm::vec4 light_position{};
+	glm::vec4 light_color{};
+	glm::mat4 light_matrix{};
 	glm::vec4 water_color = glm::vec4(0.5f, 0.5f, 1.0f, 0.5f);
 	glm::vec4 foam_color = glm::vec4(0.8f, 0.8f, 1.0f, 1.0f);
 	glm::vec4 caustic_color = glm::vec4(0.45f, 0.45f, 0.9f, 1.0f);

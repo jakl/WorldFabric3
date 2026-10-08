@@ -23,7 +23,7 @@ public:
 
 private:
 
-	int pawn_id;
+	int pawn_id = 0;
 	float current_angle = 0;
 	int light_effect_id = -1;
 	int mouse_particle_id = -1;

@@ -72,10 +72,21 @@ public:
 		bool destroyed = false;// set to true to "delete" an object, this will cause attempted reads aftyerward to return nullptr and event executions to fail
 		int64_t random_seed = 0 ;
 
+		WorldObject() = default;
+		WorldObject(const glm::vec3& position) : position(position) {};
+
 		virtual ~WorldObject() = default; // Force to be polymorphic
 
 		// returns the type id of the object in the given registry
 		virtual int getTypeId(Registry* r) const = 0 ;
+
+		virtual std::shared_ptr<WorldObject> deepCopy(){
+			return std::static_pointer_cast<WorldObject>(world->registry->deepCopy(this, getTypeId(world->registry.get())));
+		}
+
+		virtual bool observationEnabled(){
+			return true ;
+		}
 
 		//Read another object in the timeline, speed of info will be enforced
 		//Returns nullptr if the object doesn't exist or isn't yet readable
@@ -102,7 +113,6 @@ public:
 			world->new_events.insert(event);
 		}
 
-		template<>
 		void inline queue(int64_t obj_id, double target_time, int func_id){
 			std::shared_ptr<VoidEvent> event = std::make_shared<VoidEvent>(obj_id, func_id, target_time, std::vector<char>());
 			event->dispatch_position = event_position;//if called on a read object dispatch position should be event object then this could be const
@@ -195,51 +205,78 @@ public:
 
 	public:
 
+		//List loops around vector, if last > next, then list goes from last to end, then end to head -1
+		//if last == next the list is empty
+		std::vector<std::shared_ptr<WorldObject>> history ; // time is in object->time
+		int next = 0 ; // location of next element placement (exclusive)
+		int last = 0 ; // location of oldest active element (inclusive)
+		bool observation_enabled = true; // whether observations are generated automatically for the buffer
+
 		ObjectHistory() {
-			throw std::runtime_error("Object history is being cvreated empty!");
+			throw std::runtime_error("Object history is being created empty!");
 		}
 
 		ObjectHistory(std::shared_ptr<WorldObject> first_instant) {
-			addInstant(first_instant);
+			resize(10) ;
+			addInstant(first_instant, -FLT_MAX);
+			observation_enabled = first_instant->observationEnabled();
 		}
 
 		// Returns the most recent version of the object that can be read from the given vantage point obeying max_info_speed and max_read_distance
-		std::shared_ptr<const WorldObject> read(const glm::vec3& vantage, const double time);
+		std::shared_ptr<const WorldObject> read(const glm::vec3& vantage, const double& time);
 
 		// Returns the most recent version of the object that can be read from the given vantage point obeying max_info_speed but not obeying max read distance
-		std::shared_ptr<const WorldObject> readFar(const glm::vec3& vantage, const double time);
+		std::shared_ptr<const WorldObject> readFar(const glm::vec3& vantage, const double& time);
 
 		// Returns the state of this object at the given time (used for base state where time warp is not used)
-		std::shared_ptr<WorldObject> getStateAt(const double time);
+		std::shared_ptr<WorldObject> getStateAt(const double& time);
 
 		//Returns all states of this history of this object in the given time range
-		//will be ordered from newest to oldest
-		std::vector<std::shared_ptr<WorldObject>> getStateRange(const double start_time, const double end_time);
+		//will be ordered from oldest to newest
+		std::vector<std::shared_ptr<WorldObject>> getStateRange(const double& start_time, const double& end_time);
 
 		// returns the time and value of the latest instance of this object
 		std::shared_ptr<WorldObject> getLatest();
 
-		// removes all but one element of the history before the given base_time
-		void cleanHistory(double base_time);
+		// Returns if the history object is safe to delete entirely
+		bool cleanHistory(const double& base_time);
 
 		// Removes all instants after the given time
-		void deleteAfter(double base_time);
+		void deleteAfter(const double& base_time);
 
-		void addInstant(std::shared_ptr<WorldObject>& instant);
+		//Adds a new instant to the head of the list
+		//May delete an old instant if it is older than clear_time
+		void addInstant(std::shared_ptr<WorldObject>& instant, const double& clear_time);
 
+		//Resize the looping vector to this size
+		void resize(const int& size);
 
-		std::map<double, std::shared_ptr<WorldObject>> history; // maps time to a state change of an object
-		std::shared_ptr<WorldObject> latest;
+		bool empty();
+
+	};
+
+	class EventHistory{
+	public:
+		static inline double time_slice= 1/60.0 ;
+		std::map<double, std::unordered_set<std::shared_ptr<WorldEvent>>> history;
+
+		//Get time rounded up to the nearest slice
+		double getTimeSlice(double time) ;
+
+		void insert(const std::shared_ptr<WorldEvent>& event);
+
+		void erase(const std::shared_ptr<WorldEvent>& event);
 
 	};
 
 	double last_vantage_time = 0; // in seconds since beginning of scenario
 	glm::vec3 last_vantage = glm::vec3(0, 0, 0);
 	double last_clean_time = -1.0;
+	int runs = 0 ;
 
 	std::unordered_map<int64_t, ObjectHistory> objects; // All objects currently in the timeline and their history
 	std::unordered_set<std::shared_ptr<WorldEvent>> pending_events; // Events pending run in no particular order
-	std::unordered_set<std::shared_ptr<WorldEvent>> event_history; // Events that have been executed but could be rolled back
+	EventHistory event_history; // Events that have been executed but could be rolled back
 	std::vector<std::shared_ptr<WorldEvent>> external_events; // Events injected from outside the timeline that need to be included in network updates
 	std::unordered_set<std::shared_ptr<WorldEvent>> new_events; //Events created by the last run event
 	std::shared_ptr<Registry> registry; // Registry of objects and functions that can be serialized
@@ -271,7 +308,6 @@ public:
 		queue(vantage, vantage_time, event);
 	}
 
-	template <>
 	void inline queue(const glm::vec3& vantage, double vantage_time, int64_t obj_id, double target_time, int method_id) {
 		std::shared_ptr<VoidEvent> event = std::make_shared<VoidEvent>(obj_id, method_id, target_time, std::vector<char>());
 		queue(vantage, vantage_time, event);
@@ -328,9 +364,6 @@ public:
 
 	//returns whether an event could effect another event
 	bool couldEffect(const std::shared_ptr<WorldEvent>& cause, const std::shared_ptr<WorldEvent>& effect);
-
-	//rolls back all events and object changes that have occured withing the light cone of the trigger
-	void rollback(const glm::vec3& trigger_position, double trigger_time);
 
 	void applyPendingRollbacks();
 
@@ -390,7 +423,7 @@ public:
 		float history_kept = -1.0f;
 		double last_vantage_time = -1.0f;
 		std::string version ;
-		glm::vec3 last_vantage;
+		glm::vec3 last_vantage{};
 
 		std::vector<std::vector<char>> objects ;
 		std::vector<std::pair<char, std::vector<char>>> pending_events ;
@@ -420,7 +453,7 @@ public:
 		//Sends of hash of objects at a specific time for checking sync failure
 		double hash_time = 1.0 ;
 		int64_t object_hash = -1 ;
-		double last_run_time;
+		double last_run_time = 0.0;
 		// events that were externally queued and need to be injected
 		std::vector<std::pair<char, std::vector<char>>> external_events;
 

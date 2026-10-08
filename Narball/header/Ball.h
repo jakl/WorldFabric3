@@ -69,13 +69,13 @@ public:
 
 class BallView : public ObjectView<Ball> {
 public:
-	int64_t id;
+	int64_t id = 0LL;
 	int scene_id = -1;
 	int last_sound = -1;
 	int last_sound_number = -1;
 	std::chrono::high_resolution_clock::time_point last_sound_time = now();
 	Ball last_view;
-	double last_age;
+	double last_age = 0.0;
 
 	//created is called when an objectis observed that ws no observed last time view was called on the world
 	void created(std::shared_ptr<const Ball>& observation) override;

@@ -128,7 +128,7 @@ inline bool isInt(const std::string& s){
 inline std::string replaceAll(const std::string& s, std::string const& to_replace, std::string const& replace_with) {
 	std::string buf;
 	std::size_t pos = 0;
-	std::size_t prevPos;
+	std::size_t prevPos = 0;
 
 	// Reserves rough estimate of final size of string.
 	buf.reserve(s.size());
@@ -270,7 +270,7 @@ public:
 	}
 
 	ComplexNumber operator[](const ComplexNumber& x) {
-		apply(x);
+		return apply(x);
 	}
 
 	ComplexNumber apply(const ComplexNumber& x) {

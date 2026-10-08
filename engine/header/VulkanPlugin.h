@@ -23,6 +23,7 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <mutex>
 #include <unordered_set>
 #include <vector>
 
@@ -33,15 +34,17 @@ class RenderTarget;
 
 // This structs are just used to hold the GPU pointers that need to be destroyed when the image and buffer get deleted
 struct ImageToDestroy{
-	VkImage image;
-	VkImageView imageView;
-	VmaAllocation allocation;
+	VkImage image = VK_NULL_HANDLE;
+	VkImageView imageView = VK_NULL_HANDLE;
+	VmaAllocation allocation = nullptr;
+	int frame = 0;
 	std::chrono::high_resolution_clock::time_point time;
 };
 
 struct BufferToDestroy{
-	VkBuffer buffer;
-	VmaAllocation allocation;
+	VkBuffer buffer = VK_NULL_HANDLE;
+	VmaAllocation allocation = nullptr;
+	int frame = 0 ;
 	std::chrono::high_resolution_clock::time_point time ;
 };
 
@@ -51,37 +54,30 @@ class VulkanImage {
 		VkImage image = 0;
 		VkImageView imageView = 0;
 		VmaAllocation allocation = 0;
-		VkExtent3D imageExtent ;
-		VkFormat imageFormat ;
+		VkExtent3D imageExtent{} ;
+		VkFormat imageFormat = VK_FORMAT_UNDEFINED;
 		VkImageUsageFlags usages = 0 ;
-		VkImageLayout current_layout ;
+		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		bool depth = false;
 
 		static inline std::mutex buffer_lock;
 
-		~VulkanImage(){
-			buffer_lock.lock();
-			vulkan_images_to_destroy.push_back({image,imageView,allocation, now()});
-			buffer_lock.unlock();
-		}
+		~VulkanImage();
+
 		static inline std::vector<ImageToDestroy> vulkan_images_to_destroy = std::vector<ImageToDestroy>();
 };
 
 class VulkanBuffer {
 	public:
-		VkBuffer buffer;
-		VmaAllocation allocation;
-		VmaAllocationInfo info;
-		VkDeviceAddress device_address; // can be used as apointer in shaders, will be set only if the buffer is flagged for shader use
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VmaAllocation allocation = nullptr;
+		VmaAllocationInfo info{};
+		VkDeviceAddress device_address = 0ULL; // can be used as apointer in shaders, will be set only if the buffer is flagged for shader use
 		uint32_t object_count = 0;// will be set when pushing structs with pushBufferData
 
 		static inline std::mutex buffer_lock ;
 
-		~VulkanBuffer(){
-			buffer_lock.lock() ;
-			vulkan_buffers_to_destroy.push_back({ buffer,allocation, now() });
-			buffer_lock.unlock();
-		}
+		~VulkanBuffer() ;
 
 		static inline std::vector<BufferToDestroy> vulkan_buffers_to_destroy = std::vector<BufferToDestroy>();
 };
@@ -107,19 +103,19 @@ public:
 
 private:
 	std::shared_ptr<VulkanImage> vulkan_image = nullptr; //will only be manipulated on the Vulkan thread
-	uint32_t width;
-	uint32_t height;
+	uint32_t width = 0;
+	uint32_t height = 0;
 
 	bool needs_created = false;
-	VkFormat format;
-	VkImageUsageFlags usages;
+	VkFormat format = VK_FORMAT_UNDEFINED;
+	VkImageUsageFlags usages = 0;
 
 	bool needs_data_push = false;
 	Variant pending_data;
 
 	bool needs_sampler = false;
 	bool has_sampler = false;
-	VkSampler texture_sampler;
+	VkSampler texture_sampler = VK_NULL_HANDLE;
 	VkSamplerCreateInfo sampler_info{};
 
 } ;
@@ -163,10 +159,10 @@ class TriangleShaderProgram{
 			vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(T), &push_constants);
 		}
 	private:
-		VkPipelineLayout layout;
-		VkPipeline pipeline;
-		VkDevice device;
-		int num_color_attachments ; // triangle shaders don't have to attach all rrender target images
+		VkPipelineLayout layout = VK_NULL_HANDLE;
+		VkPipeline pipeline = VK_NULL_HANDLE;
+		VkDevice device = VK_NULL_HANDLE;
+		int num_color_attachments = 0 ; // triangle shaders don't have to attach all rrender target images
 };
 
 // A compute shader program which runs on a set of images
@@ -200,15 +196,15 @@ public:
 	void updateImageSize(int w, int h);
 
 	
-	VkDescriptorSet image_descriptors;
+	VkDescriptorSet image_descriptors = VK_NULL_HANDLE;
 private:
-	VkPipelineLayout layout;
-	VkPipeline pipeline;
-	VkDevice device;
-	VkDescriptorSetLayout descriptor_layout;
-	int local_size ; 
-	int image_width ;
-	int image_height ;
+	VkPipelineLayout layout = VK_NULL_HANDLE;
+	VkPipeline pipeline = VK_NULL_HANDLE;
+	VkDevice device = VK_NULL_HANDLE;
+	VkDescriptorSetLayout descriptor_layout = VK_NULL_HANDLE;
+	int local_size = 0 ; 
+	int image_width = 0 ;
+	int image_height = 0 ;
 };
 
 
@@ -238,8 +234,11 @@ public:
 	// you can assume that beinGroup will have been called for at leats one entity in a group
 	virtual void render(VkCommandBuffer cmd, VulkanPlugin* renderer, std::shared_ptr<RenderTarget> target) = 0;
 
-	// Mkae sure all textues are i nthe texture layout in case they were rendered to
+	// Make sure all textues are in the correct texture layout in case they were rendered to
 	virtual void requireTextureLayouts(VkCommandBuffer cmd, VulkanPlugin* renderer) = 0 ;
+
+	//Push any pending buffer changes, like model, instance, or textures
+	virtual void updateBuffers(VkCommandBuffer cmd, VulkanPlugin* renderer) = 0;
 
 	// Allows setting instances on a TriangleModel through a Renderable withut knowing the exact instant type
 	// instances will need to actually match the model
@@ -288,6 +287,21 @@ public:
 	static inline constexpr bool USE_VALIDATION_LAYERS = false;
 	static inline constexpr unsigned int CHAIN_FRAMES = 2;
 	static inline int millis_to_hold_buffer = 50; // buffers get a few milliseconds before being destroyed after going out of scope to give pending off thread GPU actions time to complete
+	static inline int frames_to_hold_buffer = 3 ; // In case frame rate hitches, like when loading large models, also make sure buffers hang around for frame completion
+	static inline int frame_number = 0 ; // number of frames displayed so far
+	static inline int completed_frame = -1 ; // newest frame_number whose GPU work is known to have finished, proven by its render fence
+
+	// raw Vulkan buffers (not VMA) that must outlive every command buffer that referenced them
+	struct GPUBufferToDestroy {
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VkDeviceMemory memory = VK_NULL_HANDLE;
+		int frame = 0; // frame_number being recorded when the buffer was retired
+	};
+	static inline std::mutex gpu_buffers_lock;
+	static inline std::vector<GPUBufferToDestroy> gpu_buffers_to_destroy;
+
+	// destroys the buffer and memory once the GPU has finished the frame currently being recorded; safe to call from any thread
+	static void destroyAfterGPU(VkBuffer buffer, VkDeviceMemory memory);
 
 	static inline std::vector<std::pair<VkSampler, std::chrono::high_resolution_clock::time_point>> samplers_to_destroy; // This is stored in the vulkan plugin to prevent the global from being duplicated for different templated models
 
@@ -298,8 +312,8 @@ public:
 	// SDL bookkeeping
 	SDL_Window* window = nullptr;
 	std::string title;
-	int window_width = 1280;
-	int window_height = 720;
+	int window_width = 960;
+	int window_height = 540;
 	bool vsync_enabled = true ;
 	int target_frame_micros = 1000000 / 120; //if vsync off, attempts to hit this amount of time on each frame
 	int sleep_micros = 0;
@@ -308,14 +322,14 @@ public:
 	int next_renderable_id = 1 ;
 
 	//handles for Vulkan
-	VkDevice device;
-	VkInstance vulkan_instance;
-	VkDebugUtilsMessengerEXT debug_messenger;
-	VkPhysicalDevice physical_device;
-	VmaAllocator VMA_allocator;
+	VkDevice device = VK_NULL_HANDLE;
+	VkInstance vulkan_instance = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+	VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+	VmaAllocator VMA_allocator = nullptr;
 
-	VkQueue vulkan_queue;
-	uint32_t vulkan_queue_family;
+	VkQueue vulkan_queue = VK_NULL_HANDLE;
+	uint32_t vulkan_queue_family = 0U;
 
 	//TODO make private?
 	std::vector< std::shared_ptr<WFImage>> extra_images_to_clear ; // images besides render targets to be cleared at the begining of each frame
@@ -324,7 +338,11 @@ public:
 	
 	std::shared_ptr<RenderTarget> window_target;
 
+	bool fullscreen = true ;
+	std::thread SDL_thread ;
+	bool sdl_ready  = false;
 	static inline int last_sdl_input_num = -1 ; // version user inputs so input latency can be measured
+	
 
 	// Creates a window and connects to controllers and other hardware
 	VulkanPlugin(const std::string& title, bool vsync, bool fullscreen);
@@ -334,6 +352,8 @@ public:
 	void initialize() override;
 
 	void run() override;
+
+	void runSDLThread() ;
 
 	// returns the key code of the last key pressed
 	int getLastKeyPress();
@@ -386,6 +406,8 @@ public:
 
 	std::shared_ptr<VulkanBuffer> createVulkanBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	void destroyBuffer(BufferToDestroy& buffer);
+
+	void destroyFinishedGPUBuffers();
 
 	//returns memory type to use when the given flasg are required
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -490,8 +512,9 @@ public:
 
 	void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
 
+
 	template<typename T>
-	inline void pushBufferData(const std::vector<T>& input_data, std::shared_ptr<VulkanBuffer> buffer) {
+	inline void pushBufferData(VkCommandBuffer& cmd, const std::vector<T>& input_data, std::shared_ptr<VulkanBuffer> buffer) {
 		lock.lock();
 		const size_t buffer_size = input_data.size() * sizeof(T);
 		if(buffer_size == 0){
@@ -499,23 +522,27 @@ public:
 			return ;
 		}
 		std::shared_ptr <VulkanBuffer> staging = createVulkanBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-		void* staging_data;
-		vmaMapMemory(VMA_allocator, staging->allocation, &staging_data);
+			
+		// createVulkanBuffer makes every buffer persistently mapped; a vmaMapMemory here would need a matching unmap before destruction
+		memcpy(staging->info.pMappedData, input_data.data(), buffer_size);// copy vertex buffer into staging
 
-		memcpy(staging_data, input_data.data(), buffer_size);// copy vertex buffer into staging
-
-		immediateSubmit([&](VkCommandBuffer cmd) { // move from staging to given buffer
-			VkBufferCopy data_copy{ 0 };
-			data_copy.dstOffset = 0;
-			data_copy.srcOffset = 0;
-			data_copy.size = buffer_size;
-			vkCmdCopyBuffer(cmd, staging->buffer, buffer->buffer, 1, &data_copy);
-			});
-		//destroyBuffer(staging);
+		// move from staging to given buffer
+		VkBufferCopy data_copy{ 0 };
+		data_copy.dstOffset = 0;
+		data_copy.srcOffset = 0;
+		data_copy.size = buffer_size;
+		vkCmdCopyBuffer(cmd, staging->buffer, buffer->buffer, 1, &data_copy); // staging goes out of scope here, but buffers always hang around for millis_to_hold_buffer so this is fine
 		buffer->object_count = (uint32_t)input_data.size();
 		lock.unlock();
 	}
 
+	template<typename T>
+	inline void pushBufferData(const std::vector<T>& input_data, std::shared_ptr<VulkanBuffer> buffer) {
+		//create Vulkan command to submit automatically (This is slow  you should pass a command buffer if you have one)
+		immediateSubmit([&](VkCommandBuffer cmd) {
+			pushBufferData(cmd, input_data, buffer) ;
+		});
+	}
 
 	static inline bool timing_enabled = false;
 	static inline int log_print_interval_seconds = 10 ;
@@ -543,36 +570,36 @@ private:
 	std::pair<int, int> last_gamepad_button = {-1,-1} ;
 
 	int last_key = -1;
-	glm::vec2 mouse_position ;
-	glm::vec2 mouse_down_position;
-	glm::vec2 mouse_wheel_position;
+	glm::vec2 mouse_position{} ;
+	glm::vec2 mouse_down_position{};
+	glm::vec2 mouse_wheel_position{};
 	std::map<int, bool> mouse_down ;
 	bool mouse_hidden = false;
 	bool last_mouse_hidden = false; 
 	int typing_cursor = 0;
 	std::string typed_text ;
 	
-	VkSurfaceKHR SDL_vulkan_surface;
-	VkSwapchainKHR swapchain;
-	VkFormat swapchainImageFormat;
-	VkExtent2D swapchainExtent;
+	VkSurfaceKHR SDL_vulkan_surface = VK_NULL_HANDLE;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+	VkFormat swapchainImageFormat = VK_FORMAT_UNDEFINED;
+	VkExtent2D swapchainExtent{};
 	vkb::Swapchain vkbSwapchain ;
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> swapchainImages;
 	std::vector<VkImageView> swapchainImageViews;
 
-	VkDescriptorSet draw_image_descriptors;
-	VkDescriptorSetLayout draw_image_descriptor_layout;
+	VkDescriptorSet draw_image_descriptors = VK_NULL_HANDLE;
+	VkDescriptorSetLayout draw_image_descriptor_layout = VK_NULL_HANDLE;
 
 	vkb::Swapchain swap_chain ;
 
 	static const int MAX_DESCRIPTORS_PER_POOL = 1 ;
 	struct PoolWithInfo{
-		VkDescriptorPool pool ;
+		VkDescriptorPool pool = VK_NULL_HANDLE;
 		int image_count= -1 ; // number of images in binding also pool_sizes size
 		int used_descriptors = 0 ;
-		VkDescriptorType type;
-		VkShaderStageFlags stage_flags ;
+		VkDescriptorType type{};
+		VkShaderStageFlags stage_flags = 0U ;
 	};
 	std::unordered_map<std::pair<VkDescriptorType,VkShaderStageFlags>,std::unordered_map<int, std::vector<std::shared_ptr<PoolWithInfo>>>> descriptor_pools ;//First index is number of images, so each pool only contains descriptors of the same size
 	std::unordered_map < VkDescriptorSet, std::pair<std::shared_ptr<PoolWithInfo>, VkDescriptorSetLayout>> descriptor_location; // remember which pools we allocate to and our layout for easy cleanup
@@ -581,26 +608,25 @@ private:
 	std::unordered_set< std::shared_ptr<RenderTarget>> active_targets;
 
 	// immediate submit structures
-	VkFence main_fence ;
-	VkCommandBuffer command_buffer ;
-	VkCommandPool command_pool ;
+	VkFence main_fence = VK_NULL_HANDLE;
+	VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+	VkCommandPool command_pool = VK_NULL_HANDLE;
 
 	int max_time_stamps = 40 ;
 	VkQueryPoolCreateInfo queryPoolInfo{};
-	VkQueryPool timestamp_query_pool;
+	VkQueryPool timestamp_query_pool = VK_NULL_HANDLE;
 
 
 	struct FrameData {
-		VkSemaphore swapchain_semaphore, render_semaphore;
-		VkFence acquire_fence ;
-		VkFence render_fence;
-		VkCommandPool command_pool;
-		VkCommandBuffer main_command_buffer;
+		VkSemaphore swapchain_semaphore = VK_NULL_HANDLE, render_semaphore = VK_NULL_HANDLE;
+		VkFence acquire_fence = VK_NULL_HANDLE;
+		VkFence render_fence = VK_NULL_HANDLE;
+		VkCommandPool command_pool = VK_NULL_HANDLE;
+		VkCommandBuffer main_command_buffer = VK_NULL_HANDLE;
 
 	};
 
 	FrameData frames[CHAIN_FRAMES]; // frames of th swap chain for buffering
-	int frame_number = 0 ;
 
 	bool resize_requested = false ;
 	bool minimized = false;
@@ -625,8 +651,8 @@ private:
 
 class RenderTarget {
 public:
-	glm::mat4 camera_matrix;
-	glm::vec3 camera_position ;
+	glm::mat4 camera_matrix{};
+	glm::vec3 camera_position{} ;
 	int width = 0; // dimensions of images
 	int height = 0;
 	float near = -1;
@@ -768,6 +794,7 @@ public:
 	std::shared_ptr<VulkanBuffer> vertex_buffer;
 	std::vector<Vertex> vertices;
 	bool model_changed = false;
+	bool model_size_changed = false;
 
 	//Instance specific data
 	std::shared_ptr<VulkanBuffer> instance_buffer;
@@ -776,16 +803,15 @@ public:
 	bool num_instances_changed = false; // changign he size of the buffer requires changign the binding descriptor
 
 	// Buffer to hold the command for indirect drawing
-	VkBuffer draw_indirect_buffer;
-	VkDeviceMemory draw_indirect_buffer_memory;
+	VkBuffer draw_indirect_buffer = VK_NULL_HANDLE;
+	VkDeviceMemory draw_indirect_buffer_memory = VK_NULL_HANDLE;
 	bool draw_indirect_buffer_allocated = false;
-
 
 	// Texture data
 	std::vector<std::shared_ptr<WFImage>> textures;
 	bool textures_changed = false;
 	bool has_descriptor = false;
-	VkDescriptorSet texture_set_descriptor ;
+	VkDescriptorSet texture_set_descriptor = VK_NULL_HANDLE;
 
 
 	PushConstants push_constants ;
@@ -808,6 +834,7 @@ public:
 	}
 
 	~TriangleModel(){
+		VulkanPlugin::destroyAfterGPU(draw_indirect_buffer, draw_indirect_buffer_memory);
 		/* TODO This crashes when the app exits, but without it we are leaking a small amount of GPU memory when a model is unloaded
 		if (has_descriptor) {
 			getTool<VulkanPlugin>()->destroyBinding(texture_set_descriptor);
@@ -847,6 +874,7 @@ public:
 
 	void setModel(const std::vector<Vertex>& new_vertices, const std::vector<uint32_t>& new_indices) {
 		lock.lock();
+		model_size_changed |= vertices.size() != new_vertices.size() || indices.size() != new_indices.size() ;
 		vertices = new_vertices;
 		indices = new_indices;
 		model_changed = true;
@@ -937,6 +965,50 @@ public:
 	void endGroup(VkCommandBuffer cmd, VulkanPlugin* renderer, std::shared_ptr<RenderTarget> target) override {
 	}
 
+	//Push any pending buffer changes, like model, instance, or textures
+	void updateBuffers(VkCommandBuffer cmd, VulkanPlugin* renderer) override{
+		lock.lock();
+		if (model_changed) {
+			if(model_size_changed){
+				vertex_buffer = renderer->createVulkanBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+				index_buffer = renderer->createVulkanBuffer(indices.size() * sizeof(int32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+				model_size_changed = false ;
+				draw_indirect_buffer_allocated = false;
+			}
+			renderer->pushBufferData(cmd,vertices, vertex_buffer);
+			renderer->pushBufferData(cmd,indices, index_buffer);
+			model_changed = false;
+			if (debug_print) {
+				printf("model update\n");
+			}
+		}
+		if (textures_changed) {
+			if (has_descriptor) {
+				renderer->destroyBinding(texture_set_descriptor);
+			}
+			texture_set_descriptor = renderer->createImageBinding(textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			has_descriptor = true;
+			textures_changed = false;
+			if (debug_print) {
+				printf("textures_updated\n");
+			}
+		}
+		if (instances_changed) {
+			if (num_instances_changed) {
+				//printf("initializing new buffer size of %d in phase %d\n", (int) instances.size(), phase) ;
+				instance_buffer = renderer->createVulkanBuffer(instances.size() * sizeof(Instance), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+				num_instances_changed = false;
+				draw_indirect_buffer_allocated = false; // the draw command needs to be updated to draw the new amount of instances
+			}
+			renderer->pushBufferData(cmd, instances, instance_buffer);
+			instances_changed = false;
+			if (debug_print) {
+				printf("instances updated\n");
+			}
+		}
+		lock.unlock();
+	}
+
 	void requireTextureLayouts(VkCommandBuffer cmd, VulkanPlugin* renderer) override {
 		lock.lock();
 		for(std::shared_ptr<WFImage> texture : textures){
@@ -949,46 +1021,6 @@ public:
 		lock.lock();
 		if(debug_print){
 			printf("render called\n");
-		}
-		//renderer->stampTime(cmd, concat("A - ",group));
-		if (model_changed) {
-			vertex_buffer = renderer->createVulkanBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-			renderer->pushBufferData(vertices, vertex_buffer);
-
-			index_buffer = renderer->createVulkanBuffer(indices.size() * sizeof(int32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-			renderer->pushBufferData(indices, index_buffer);
-
-			model_changed = false;
-			if (debug_print) {
-				printf("model update\n");
-			}
-		}
-		//renderer->stampTime(cmd, "B");
-		if (textures_changed) {
-			if(has_descriptor){
-				renderer->destroyBinding(texture_set_descriptor) ;
-			}
-			texture_set_descriptor = renderer->createImageBinding(textures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			has_descriptor = true ;
-			textures_changed = false;
-			if (debug_print) {
-				printf("textures_updated\n");
-			}
-		}
-		//renderer->stampTime(cmd, "C");
-		
-		if (instances_changed) {
-			if (num_instances_changed) {
-				//printf("initializing new buffer size of %d in phase %d\n", (int) instances.size(), phase) ;
-				instance_buffer = renderer->createVulkanBuffer(instances.size() * sizeof(Instance), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-				num_instances_changed = false;
-				draw_indirect_buffer_allocated = false; // the draw command needs to be updated to draw the new amount of instances
-			}
-			renderer->pushBufferData(instances, instance_buffer);
-			instances_changed = false;
-			if (debug_print) {
-				printf("instances updated\n");
-			}
 		}
 		
 		//renderer->stampTime(cmd, "D");
@@ -1020,13 +1052,11 @@ public:
 		program->setPushConstants(cmd, push_constants);
 
 		if (!draw_indirect_buffer_allocated) {
-			
-			if(draw_indirect_buffer){ // if this isn't our first buffer
-				vkDestroyBuffer(renderer->device, draw_indirect_buffer, nullptr); // delete previous buffer from GPU
-				if(draw_indirect_buffer_memory){
-					vkFreeMemory(renderer->device, draw_indirect_buffer_memory, nullptr); // TODO should also clean these up when triangle model destructed
-				}
-			}
+
+			// earlier frames, or an earlier render target in this frame, may still be drawing from the previous buffer
+			VulkanPlugin::destroyAfterGPU(draw_indirect_buffer, draw_indirect_buffer_memory);
+			draw_indirect_buffer = VK_NULL_HANDLE;
+			draw_indirect_buffer_memory = VK_NULL_HANDLE;
 
 			VkDrawIndexedIndirectCommand drawCmd{};
 			drawCmd.indexCount = (uint32_t)(index_buffer->object_count);
@@ -1045,7 +1075,7 @@ public:
 			vkCreateBuffer(renderer->device, &bufferInfo, nullptr, &draw_indirect_buffer);
 
 			// Step 2: Allocate and bind memory
-			VkMemoryRequirements memReq;
+			VkMemoryRequirements memReq{};
 			vkGetBufferMemoryRequirements(renderer->device, draw_indirect_buffer, &memReq);
 
 			VkMemoryAllocateInfo allocInfo{};
@@ -1061,7 +1091,7 @@ public:
 			vkBindBufferMemory(renderer->device, draw_indirect_buffer, draw_indirect_buffer_memory, 0);
 
 
-			void* data;
+			void* data = nullptr;
 			vkMapMemory(renderer->device, draw_indirect_buffer_memory, 0, sizeof(drawCmd), 0, &data);
 			memcpy(data, &drawCmd, sizeof(drawCmd));
 			vkUnmapMemory(renderer->device, draw_indirect_buffer_memory);
@@ -1214,15 +1244,20 @@ public:
 	void requireTextureLayouts(VkCommandBuffer cmd, VulkanPlugin* renderer) override {
 		
 	}
-
-	void render(VkCommandBuffer cmd, VulkanPlugin* renderer, std::shared_ptr<RenderTarget> target) override {
+	//Push any pending buffer changes, like model, instance, or textures
+	void updateBuffers(VkCommandBuffer cmd, VulkanPlugin* renderer) override{
 		lock.lock();
 		if (model_changed) {
 			component_buffer = renderer->createVulkanBuffer(components.size() * sizeof(Component), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-			renderer->pushBufferData(components, component_buffer);
+			renderer->pushBufferData(cmd, components, component_buffer);
 			model_changed = false;
 		}
+		lock.unlock();
+	}
 
+	void render(VkCommandBuffer cmd, VulkanPlugin* renderer, std::shared_ptr<RenderTarget> target) override {
+		lock.lock();
+		
 		*push_camera_matrix = target->camera_matrix;
 		*push_camera_position = target->camera_position;
 		*push_component_buffer_location = component_buffer->device_address;

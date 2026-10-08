@@ -87,7 +87,7 @@ void Narwhal::update() {
 
 
 	bool hit_wall = false;
-	glm::vec3 wall_hit_position;
+	glm::vec3 wall_hit_position{};
 	//Bounce inside the field
 	if (position.x + body_radius > grid->max.x) {
 		position.x = grid->max.x - body_radius;
@@ -309,7 +309,7 @@ Narwhal NarwhalView::getView(std::shared_ptr<const Narwhal>& observed) {
 			return view;
 		}
 
-		glm::vec3 view_position;
+		glm::vec3 view_position{};
 		float view_facing_angle = 0;
 		glm::vec3 last_position = last_view.position + observed->velocity * last_age;
 		float last_facing_angle = (float)(last_view.facing_angle + observed->angular_velocity * last_age);
@@ -553,7 +553,7 @@ void NarwhalView::destroyed() {
 	}
 }
 
-void NarwhalView::receiveAction(std::shared_ptr<NarwhalControlAction>& control, std::shared_ptr<ActionTrigger>& trigger){
+void NarwhalView::receiveAction(NarwhalControlAction* control, ActionTrigger* trigger){
 	if(control->player_id == last_view.player_id){ // if I am owned by the player submitting the action
 		WorldPlugin* worlds = getTool<WorldPlugin>();
 		worlds->queue(NARBALL,id,&Narwhal::setControls,control->left_stick, control->right_stick,control->input_num) ;

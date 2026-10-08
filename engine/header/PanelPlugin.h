@@ -29,22 +29,22 @@ public:
 	
 
 	struct alignas(16) PanelVertex {
-		alignas(16) glm::vec3 position;
-		alignas(16) glm::vec2 texture_coord;
+		alignas(16) glm::vec3 position{};
+		alignas(16) glm::vec2 texture_coord{};
 
 	};
 
 	struct DefaultPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
 	};
 
 	struct ScreenPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
 	};
 
 	struct DefaultInstance {
@@ -527,7 +527,7 @@ public:
 	template <typename PanelPushConstants, typename PanelInstance, typename PanelElementPushConstants, typename PanelElementInstance, typename ScreenPushConstants, typename ScreenInstance>
 	class ShaderSet : public AbstractShaderSet {
 	public:
-		ScreenPushConstants screen_push_constants;
+		ScreenPushConstants screen_push_constants{};
 		ScreenInstance screen_instance ;
 
 		std::shared_ptr<ScreenModel<ScreenPushConstants, ScreenInstance>> screen_model ;
@@ -554,10 +554,10 @@ public:
 	public:
 		std::string action;
 		std::string text;
-		int panel;
-		int element;
-		glm::mat4 base_pose;
-		glm::mat4 hover_pose;
+		int panel = 0;
+		int element = 0;
+		glm::mat4 base_pose{};
+		glm::mat4 hover_pose{};
 		glm::vec4 text_color = glm::vec4(0.1, 0, 0.1, 1.0);
 		glm::vec4 border_color = glm::vec4(0.9, 0.5, 0.2, 1.0);
 		glm::vec4 back_color_1 = glm::vec4(0.1, 0, 0.4, 0.8); //TODO add a way to actually override these
@@ -572,12 +572,12 @@ public:
 	class Label {
 	public:
 		std::string text;
-		int panel;
-		int element;
-		glm::mat4 pose;
-		float x;
-		float y;
-		bool centered;
+		int panel = 0;
+		int element = 0;
+		glm::mat4 pose{};
+		float x = 0.0F;
+		float y = 0.0F;
+		bool centered = false;
 		std::string font;
 		int image_width = -1;
 		int image_height = -1 ;
@@ -601,28 +601,28 @@ public:
 
 	class TextBox {
 	public:
-		int panel;
-		int label_element;
-		int text_element;
-		int cursor_element;
-		int box_element;
+		int panel = 0;
+		int label_element = 0;
+		int text_element = 0;
+		int cursor_element = 0;
+		int box_element = 0;
 		std::string name;
 		std::string text;
 		std::string label;
-		float x;
-		float y;
-		glm::mat4 label_pose;
-		glm::mat4 text_pose;
-		glm::mat4 box_pose;
-		glm::mat4 cursor_pose;
+		float x = 0.0F;
+		float y = 0.0F;
+		glm::mat4 label_pose{};
+		glm::mat4 text_pose{};
+		glm::mat4 box_pose{};
+		glm::mat4 cursor_pose{};
 		double last_update_time = 0;
 		int max_text_length = 12;
 		bool numbers_only = false;
 		int cursor_index = 0;
 		int cursor_width = 4;
-		int cursor_x;
-		int cursor_y;
-		int cursor_height;
+		int cursor_x = 0;
+		int cursor_y = 0;
+		int cursor_height = 0;
 		std::string font;
 		float cursor_blink_speed = 2.0f;
 		bool editable = true ;
@@ -656,7 +656,7 @@ public:
 	struct NavLink{
 		std::pair<int, int> from ; // panel and element
 		std::pair<int, int> to; // panel and element
-		glm::vec2 direction ; 
+		glm::vec2 direction{} ; 
 	};
 
 	PanelPlugin(VulkanPlugin* window);

@@ -1,6 +1,19 @@
 #include "SteamworksPlugin.h"
 #include "Registry.h"
 
+// Steam's C++ interfaces return CSteamID by value, which only works with MSVC's member-function ABI.
+// The flat API (declared in steam_api_flat.h) returns plain integers, so it is safe with any compiler (e.g. MinGW GCC).
+S_API uint64 SteamAPI_ISteamUser_GetSteamID(ISteamUser* self);
+S_API uint64 SteamAPI_ISteamMatchmaking_GetLobbyOwner(ISteamMatchmaking* self, uint64 steamIDLobby);
+
+static CSteamID getUserSteamID() {
+	return CSteamID(SteamAPI_ISteamUser_GetSteamID(SteamUser()));
+}
+
+static CSteamID getLobbyOwner(CSteamID lobby_id) {
+	return CSteamID(SteamAPI_ISteamMatchmaking_GetLobbyOwner(SteamMatchmaking(), lobby_id.ConvertToUint64()));
+}
+
 
 SteamworksPlugin::SteamworksPlugin(long app_id, const std::string& command_line):
 	steamapp_id(0),
@@ -118,7 +131,7 @@ void SteamworksPlugin::run() {
 	
 
 	if(client_can_join_game){
-		lobby_info.host_id = SteamMatchmaking()->GetLobbyOwner(lobby_info.id);
+		lobby_info.host_id = getLobbyOwner(lobby_info.id);
 		steam_socket->join(lobby_info.host_id);
 		client_can_join_game = false ;
 
@@ -163,7 +176,7 @@ std::string SteamworksPlugin::getLocalName(){
 	if (!enabled) {
 		return "SteamDisabled" ;
 	}
-	CSteamID my_id =  SteamUser()->GetSteamID() ;
+	CSteamID my_id =  getUserSteamID() ;
 	std::string my_name = std::string(SteamFriends()->GetFriendPersonaName(my_id)) ;
 	return my_name ;
 }
@@ -173,7 +186,7 @@ uint64 SteamworksPlugin::getLocalSteamID() {
 	if (!enabled) {
 		return 0;
 	}
-	return SteamUser()->GetSteamID().ConvertToUint64();
+	return getUserSteamID().ConvertToUint64();
 }
 
 //For the host, returns the index of the connection of a given SteamID
@@ -205,11 +218,13 @@ std::shared_ptr<SteamworksPlugin::SteamSocket> SteamworksPlugin::hostPrivateLobb
 }
 
 void SteamworksPlugin::disconnect(){
-	if(steam_socket){
-		steam_socket->close(); // reset may close but we manually close in case there are any stored references
-		steam_socket.reset() ;
+	if(enabled){
+		if(steam_socket){
+			steam_socket->close(); // reset may close but we manually close in case there are any stored references
+			steam_socket.reset() ;
+		}
+		SteamMatchmaking()->LeaveLobby(lobby_info.id) ;
 	}
-	SteamMatchmaking()->LeaveLobby(lobby_info.id) ;
 }
 
 
@@ -286,7 +301,7 @@ std::shared_ptr<SteamworksPlugin::SteamSocket> SteamworksPlugin::joinLobby(CStea
 
 // Join a Steam ganme by ip and port 
 std::shared_ptr<SteamworksPlugin::SteamSocket> SteamworksPlugin::joinAddress(SteamNetworkingIPAddr& addr) {
-	char address_string[100] ;
+	char address_string[100]{} ;
 	addr.ToString(address_string,100,true) ;
 	printf("Attempting to actually join by ip: %s\n", address_string );
 	steam_socket = std::make_shared<SteamSocket>(); 
@@ -299,8 +314,8 @@ void SteamworksPlugin::onLobbyEntered(LobbyEnter_t* call_back){
 	printf("lobby entered!\n");
 	if(steam_socket && !steam_socket->is_server){
 		CSteamID lobbyID = call_back->m_ulSteamIDLobby;
-		uint32 unGameServerIP;
-		uint16 unGameServerPort;
+		uint32 unGameServerIP = 0;
+		uint16 unGameServerPort = 0;
 		CSteamID hostSteamID;
 
 		// Check if the game has already started
@@ -338,7 +353,7 @@ bool SteamworksPlugin::commandLineHasAddressJoin(const char* command_line) {
 SteamNetworkingIPAddr SteamworksPlugin::getCommandLineAddressJoin(const char* command_line) {
 	
 	const char* pchConnect = strstr(command_line, connect_param.c_str());
-	SteamNetworkingIPAddr address ;
+	SteamNetworkingIPAddr address{} ;
 	address.Clear();
 	if (pchConnect && strlen(command_line) > (pchConnect - command_line) + strlen(connect_param.c_str())){
 		// Address should be right after the +connect
@@ -418,7 +433,7 @@ void SteamworksPlugin::onLobbyCreated(LobbyCreated_t* call_back){
 		return;
 	}
 	lobby_info.id = call_back->m_ulSteamIDLobby;
-	lobby_info.host_id = SteamUser()->GetSteamID();
+	lobby_info.host_id = getUserSteamID();
 	printf("Steam lobby creation succeeded with id %lld\n", lobby_info.id.ConvertToUint64()) ;
 
 	SteamMatchmaking()->SetLobbyData(lobby_info.id, "name", lobby_info.name.c_str());
@@ -464,7 +479,7 @@ void SteamworksPlugin::onServerLobbyCreated(LobbyCreated_t* call_back) {
 	printf("Server lobby apparently created ? \n");
 	/*
 	lobby_info.id = call_back->m_ulSteamIDLobby;
-	lobby_info.host_id = SteamUser()->GetSteamID();
+	lobby_info.host_id = getUserSteamID();
 	printf("Steam server lobby creation succeeded with id %lld\n", lobby_info.id.ConvertToUint64());
 
 	SteamMatchmaking()->SetLobbyData(lobby_info.id, "name", lobby_info.name.c_str());
@@ -484,7 +499,7 @@ void SteamworksPlugin::onServerLobbyCreated(LobbyCreated_t* call_back) {
 //-----------------------------------------------------------------------------
 void SteamworksPlugin::OnSteamServersConnected(SteamServersConnected_t* pLogonSuccess){
 	//printf("OnSteamServersConnected\n");
-	SteamNetworkingIPAddr addr;
+	SteamNetworkingIPAddr addr{};
 	addr.Clear();                         // 0.0.0.0
 	addr.m_port = static_cast<uint16_t>(lobby_info.port);
 	steam_socket->hostDedicated(addr);
@@ -722,7 +737,7 @@ void SteamworksPlugin::SteamSocket::join(CSteamID lobby_to_join){
 
 // Open a steam client socket to connect to the given id
 void SteamworksPlugin::SteamSocket::join(SteamNetworkingIPAddr address_to_join) {
-	char address_string[50];
+	char address_string[50]{};
 	address_to_join.ToString(address_string, 50, true) ;
 	printf("Socket attempting to connect to ip: %s\n", address_string);
 	std::string command = "+connect " + std::string(address_string) ;
@@ -733,7 +748,7 @@ void SteamworksPlugin::SteamSocket::join(SteamNetworkingIPAddr address_to_join) 
 
 	// Send an auth ticket as the first packet
 	constexpr int max_ticket_size = 1024 ;
-	uint8 ticket_buffer[max_ticket_size];
+	uint8 ticket_buffer[max_ticket_size]{};
 	uint32 ticket_length = 0;
 	HAuthTicket hTicket = SteamUser()->GetAuthSessionTicket(
 		ticket_buffer, max_ticket_size, &ticket_length, nullptr);
@@ -832,8 +847,9 @@ bool SteamworksPlugin::SteamSocket::send(int receiver_id, const std::vector<char
 		return false ;
 	}
 
-	EResult res ;
+	EResult res = k_EResultFail;
 	if(is_dedicated){
+		//printf("Packet size: %d\n", (uint32_t)data.size()) ;
 		res = SteamGameServerNetworkingSockets()->SendMessageToConnection(connections[receiver_id], data.data(), (uint32_t)data.size(), k_nSteamNetworkingSend_ReliableNoNagle, nullptr);
 	}else{
 		res = SteamNetworkingSockets()->SendMessageToConnection(connections[receiver_id], data.data(), (uint32_t)data.size(), k_nSteamNetworkingSend_ReliableNoNagle, nullptr);
@@ -854,6 +870,7 @@ bool SteamworksPlugin::SteamSocket::send(int receiver_id, const std::vector<char
 			return false;
 		case k_EResultLimitExceeded:
 			printf("Failed sending data : There was already too much data queued to be sent\n");
+			
 			return false;
 		default:
 		{

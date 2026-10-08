@@ -9,6 +9,7 @@
 #include "AudioPlugin.h"
 #include "MachineState.h"
 #include "glm/glm.hpp"
+#include "Registry.h"
 
 #include <stdio.h>
 #include <cstdlib>
@@ -45,22 +46,27 @@ public:
 
 
 
-	static inline bool hand_tracking = true;
+	static inline bool hand_tracking = false;
 	static inline bool calibrated = false;
 	
 	static inline float mirror_distance = 2.5f;
 	static inline glm::mat4 scene_pose = glm::mat4(1.0f) ;
 
 	glm::vec3 recording_offset = glm::vec3(10,0,0);
-	double pose_delay = 1.3 ; // amount of time to delay poses to sync up with audio and morph data (this is needed when using a slow voice changer so movement matches audio)
-	int camera_scene_instance;
-	int camera_avatar_instance ;
+	double pose_delay = 1.333 ; // amount of time to delay poses to sync up with audio and morph data (this is needed when using a slow voice changer so movement matches audio)
+	int camera_scene_instance = 0;
+	int camera_avatar_instance = 0 ;
+	int camera_avatar_instance_2 = 0 ; // a mirroed version in case it isn't built for backface culling
 
 	struct HistoryPose{
 		double time  = - 1; 
-		glm::mat4 pose ;
+		glm::mat4 pose{} ;
 		std::vector<glm::mat4> bone_data ;
 	};
+
+	auto static getStructure(HistoryPose& obj) {
+		return std::tie(obj.time, obj.pose, obj.bone_data);
+	}
 
 	std::deque<HistoryPose> pose_history ;
 	
@@ -78,6 +84,7 @@ public:
 	bool space_held = false;
 	bool left_held = false;
 	bool right_held = false;
+	bool down_held = false ;
 	bool recording = false;
 	float sample_duration = 0.04f ;
 	int audio_samples_per_pose = (int)(48000*sample_duration) ;
@@ -133,7 +140,7 @@ public:
 		std::vector<glm::mat4> tracking ; // tracking position from calibration
 		std::vector<glm::mat4> target ; //target position from calibration
 
-		glm::quat pin_start_orientation ;
+		glm::quat pin_start_orientation{} ;
 
 
 		static inline int next_id = 20000;
@@ -226,11 +233,14 @@ public:
 	void updateBlink(std::vector<float>& weights);
 
 private:
-	glm::mat4 initial_head_matrix;
-	glm::mat4 initial_left_hand_matrix;
-	glm::mat4 initial_right_hand_matrix;
-	glm::mat4 initial_hips_matrix;
-	glm::mat4 avatar_pose;
+	glm::mat4 initial_head_matrix{};
+	glm::mat4 initial_left_hand_matrix{};
+	glm::mat4 initial_right_hand_matrix{};
+	glm::mat4 initial_hips_matrix{};
+	glm::mat4 avatar_pose{};
+
+	int desired_lights = 8 ;
+	std::vector<int> lights = {0} ;
 
 	bool wiggle_enabled = false;
 
@@ -258,8 +268,27 @@ private:
 	static inline glm::mat4 coord_fix = glm::scale(glm::mat4(1.0), glm::vec3(-1, 1, -1));
 
 
+	bool hand_lock = true;
+	bool lock_held = false;
+	glm::mat4 left_hand_lock_pose = { 0.0f,-1.0f,0.0f,0.0f,
+										-1.0f,0.0f,0.0f,0.0f,
+										0.0f,0.0f,-1.0f,0.0f,
+										-0.2f,0.9f,0.0f,1.0f
+	};
+
+	glm::mat4 right_hand_lock_pose = { 0.0f,1.0f,0.0f,0.0f,
+										1.0f,0.0f,0.0f,0.0f,
+										0.0f,0.0f,-1.0f,0.0f,
+										0.2f,0.9f,0.0f,1.0f
+	};
+
+
 	void recenter(ScenePlugin* scene, glm::mat4& current_head_pose);
 
+
+	glm::mat4 smooth(glm::mat4 A, glm::mat4 B, glm::mat4 C, glm::mat4 D){
+		return interpolate(interpolate(A,B,0.5f), interpolate(C,D,0.5f), 0.5f) ;
+	}
 
 };
 #endif // #ifndef _MIRROR_APP_H_

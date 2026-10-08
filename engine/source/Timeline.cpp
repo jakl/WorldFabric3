@@ -35,148 +35,167 @@ int64_t Timeline::WorldObject::create(std::shared_ptr<WorldObject> new_object, d
 	return reserved_id;
 }
 
-std::shared_ptr<const WorldObject> Timeline::ObjectHistory::read(const glm::vec3& vantage, const double time) {
-	if (history.empty()) {
-		throw std::runtime_error("Object history is empty on read.");
+// Returns the most recent version of the object that can be read from the given vantage point obeying max_info_speed and max_read_distance
+std::shared_ptr<const WorldObject> Timeline::ObjectHistory::read(const glm::vec3& vantage, const double& time){
+	if (empty()) {
+		return nullptr ;
 	}
-	auto it = history.rbegin();
-	double distance = preciseDistance((it->second)->position, vantage) ;
-	double readable_time = it->first + distance / world->max_info_speed;
-	while (readable_time >= time) {
-		it++;
-		if (it == history.rend()) {
-			return nullptr; // earliest element wasn't readable by time
+	int size = (int)history.size();
+	int i = (next + size - 1) % size;
+
+	while (true) {
+		std::shared_ptr<WorldObject> o = history[i];
+		double distance = preciseDistance(o->position, vantage) ;
+		double readable_time = o->time + distance  / world->max_info_speed;
+		if (readable_time <= time) {
+			if (o->destroyed || distance > world->max_read_distance) {
+				return std::shared_ptr<const WorldObject>();
+			}
+			else {
+				return o;
+			}
+		} else if (i != last) { // can't read it, keep looking
+			i = (i + size - 1) % size;
 		}
-		distance = preciseDistance((it->second)->position, vantage) ;
-		readable_time = it->first + distance / world->max_info_speed;
-	}
-	if (readable_time < time && !it->second->destroyed) {
-		if(distance <= world->max_read_distance){
-			return it->second;
-		}else{
-			//printf("read beyond distance from %f,%f,%f\n", vantage.x, vantage.y, vantage.z);
-			//it->second->print();
-			//printf("Why!?\n");
-			return nullptr ;
+		else { // we reached last and it wasn't readable
+			return std::shared_ptr<const WorldObject>();
 		}
-	}else {
-		return nullptr;
 	}
 }
 
-std::shared_ptr<const WorldObject> Timeline::ObjectHistory::readFar(const glm::vec3& vantage, const double time) {
-	if (history.empty()) {
-		throw std::runtime_error("Object history is empty on read.");
+// Returns the most recent version of the object that can be read from the given vantage point obeying max_info_speed but not obeying max read distance
+std::shared_ptr<const WorldObject> Timeline::ObjectHistory::readFar(const glm::vec3& vantage, const double& time){
+	if(empty()){
+		return nullptr ; // list is empty
 	}
-	auto it = history.rbegin();
-	double readable_time = it->first + preciseDistance((it->second)->position, vantage) / world->max_info_speed;
-	while (readable_time >= time) {
-		it++;
-		if (it == history.rend()) {
-			return nullptr; // earliest element wasn't readable by time
+	int size = (int)history.size();
+	int i = (next + size - 1) % size ;
+	while (true) {
+		std::shared_ptr<WorldObject> o = history[i] ;
+		double readable_time = o->time + preciseDistance(o->position, vantage) / world->max_info_speed;
+		if(readable_time <= time){
+			if(o->destroyed){
+				return nullptr ;
+			}else{
+				return o ;
+			}
+		}else if(i != last){ // can't read it, keep looking
+			i = (i + size - 1) % size;
+		}else{ // we reached last and it wasn't readable
+			return nullptr ;
 		}
-		readable_time = it->first + preciseDistance((it->second)->position, vantage) / world->max_info_speed;
-	}
-	if (readable_time < time && !it->second->destroyed) {
-		return it->second;
-	}
-	else {
-		return nullptr;
 	}
 }
 
 // Returns the state of this object at the given time (used for base state where time warp is not used)
-std::shared_ptr<WorldObject> Timeline::ObjectHistory::getStateAt(const double time) {
-	if (history.empty()) {
-		throw std::runtime_error("Object history is empty on getStateAt.");
+std::shared_ptr<WorldObject> Timeline::ObjectHistory::getStateAt(const double& time){
+	if (empty()) {
+		throw std::runtime_error("Object history is empty on getStateAt!");
 	}
-	auto it = history.rbegin();
-	double readable_time = it->first;
-	while (readable_time > time) {
-		it++;
-		if (it == history.rend()) {
-			return nullptr; // earliest element wasn't readable by time
-		}
-		readable_time = it->first;
+	
+	int size = (int)history.size() ;
+	int i = (next + size - 1) % size ;
+	while (i != last && history[i]->time > time) {
+		i = (i + size - 1) % size;
 	}
-	if (readable_time <= time && !it->second->destroyed) {
-		return it->second;
-	}
-	else {
+	if(history[i]->time <= time){
+		return history[i] ;
+	}else{
 		return nullptr ;
 	}
 }
 
 //Returns all states of this history of this object in the given time range
 //will be ordered from newest to oldest
-std::vector<std::shared_ptr<WorldObject>> Timeline::ObjectHistory::getStateRange(const double start_time, const double end_time) {
-	if (history.empty()) {
-		throw std::runtime_error("Object history is emprty on getStateRange.");
-	}
+std::vector<std::shared_ptr<WorldObject>> Timeline::ObjectHistory::getStateRange(const double& start_time, const double& end_time){
+	int size = (int)history.size();
 	std::vector<std::shared_ptr<WorldObject>> result;
-	auto it = history.rbegin();
-	double readable_time = it->first;
-	while (readable_time > start_time) {
-		if (readable_time <= end_time && !it->second->destroyed) {
-			result.push_back(it->second);
-		}
-		it++;
-		if (it == history.rend()) {
-			return result; // for through then we're done
-		}
-		readable_time = it->first;
+	if(empty()){
+		throw std::runtime_error("Object history is empty on getStateRange!");
+	}
+	//Walk backward to find instance overlapping start_time
+	int i = (next + size - 1) % size;
+	while (i != last && history[i]->time > start_time) {
+		i = (i + size - 1) % size;
+	}
+	//Walk forwards adding every element vsible beforeend_time
+	while (i!= next && history[i]->time <= end_time) {
+		result.push_back(history[i]) ;
+		i = (i+1) % size ;	
 	}
 	return result;
-
 }
 
 // returns the time and value of the latest instance of this object
-std::shared_ptr<WorldObject> Timeline::ObjectHistory::getLatest() {
-	return latest ;
+std::shared_ptr<WorldObject> Timeline::ObjectHistory::getLatest(){
+	if(empty()){
+		return nullptr ;
+	}else{
+		int size = (int)history.size();
+		return history[(next + size - 1) % size] ;
+	}
 }
 
-
-// removes all but one element of the history before the given base_time
-void Timeline::ObjectHistory::cleanHistory(double base_time) {
-	int s = (int)history.size();
-	auto it = history.lower_bound(base_time); // first element greater than or equal to time
-	if (it != history.begin()) {
-		auto keep = std::prev(it); // last element not greater than time so keep one more so we definitely have it at time
-		if (keep != history.begin()) {
-			history.erase(history.begin(), keep);
-		}
-	}
-	if (history.size() == 0) {
-		printf("history cleaned to 0? it was %d.\n", s);
-	}
+bool Timeline::ObjectHistory::cleanHistory(const double& base_time){
+	auto latest = getLatest();
+	return  latest->destroyed && latest->time < base_time ;
 }
 
 // Removes all instants after the given time
-void Timeline::ObjectHistory::deleteAfter(double time) {
-	auto keep = history.upper_bound(time);	
-	//debug check
-	/*
-	for (auto& [t, instant] : history) {
-		if (t <= time && instant->writing_event && instant->writing_event->actual_run_time < 0) {
-			printf("Object was left whose event was rolled back!\n");
-		}
-		if(t > time && instant->writing_event && instant->writing_event->actual_run_time >= 0){
-			printf("Object was rolled back whose event was not rolled back\n");
-		}
-	}*/
-	
-	history.erase(keep, history.end());
-	if(history.size() != 0){
-		latest = history.rbegin()->second ;
-	}else{
-		latest = nullptr ;
+void Timeline::ObjectHistory::deleteAfter(const double& base_time){
+	int size = (int)history.size();
+	while(next != last && history[(next+size-1)%size]->time > base_time){
+		next = (next + size - 1) % size ;
 	}
-	
 }
 
-void Timeline::ObjectHistory::addInstant(std::shared_ptr<WorldObject>& instant) {
-	history[instant->time] = instant;
-	latest = instant ;
+void Timeline::ObjectHistory::addInstant(std::shared_ptr<WorldObject>& instant,const double& clear_time){
+	int size = (int)history.size();
+	int new_next = (next + 1) % size;
+	 if(new_next != last){ // at least 2 empty space in vector
+		history[next] = instant ;
+		next = new_next ;
+	}else if(history[last]->time < clear_time && history[(last+1)%size]->time < clear_time){ // insufficient empty space but oldest element can be deleted
+		history[next] = instant;
+		next = new_next;
+		last = (last + 1) % size;
+	}else{ // No space, need a bigger array
+		resize((size*3)/2) ;
+		history[next] = instant;
+		next++;
+	}
+}
+
+//Resize the looping vector to this size
+void Timeline::ObjectHistory::resize(const int& size){
+	std::vector<std::shared_ptr<WorldObject>> new_history(size);
+	int new_next = 0 ;
+	int i = last ;
+	while(i != next){
+		new_history[new_next] = history[i] ;
+		new_next++;
+		i = (i + 1)%history.size() ;
+	}
+	history = std::move(new_history) ;
+	last = 0;
+	next = new_next;
+}
+
+bool Timeline::ObjectHistory::empty(){
+	return last == next ;
+}
+
+//Get time rounded down to the nearest slive
+double Timeline::EventHistory::getTimeSlice(double time){
+	return std::ceil(time /time_slice) * time_slice ;
+}
+
+void Timeline::EventHistory::insert(const std::shared_ptr<WorldEvent>& event){
+	history[getTimeSlice(event->actual_run_time)].insert(event);
+}
+
+void Timeline::EventHistory::erase(const std::shared_ptr<WorldEvent>& event) {
+	history[getTimeSlice(event->actual_run_time)].erase(event);
 }
 
 // Runs an event that should be in pending_events and moves it to event_history
@@ -227,7 +246,7 @@ void Timeline::VoidEvent::run(std::shared_ptr<WorldEvent> this_event) {
 		return ;
 	}
 	// make a new instance by copying wit the serializer
-	std::shared_ptr<WorldObject> new_latest = std::static_pointer_cast<WorldObject>(world->registry->deepCopy(latest.get(), latest->getTypeId(world->registry.get())));
+	std::shared_ptr<WorldObject> new_latest = latest->deepCopy() ;
 	// mark the object and event with the run time and position
 	new_latest->time = actual_run_time; // can be read when executing event, and should contain event time in that case
 	new_latest->id = latest->id; // id is not saved so won't be copied with deepCopy
@@ -245,7 +264,7 @@ void Timeline::VoidEvent::run(std::shared_ptr<WorldEvent> this_event) {
 
 
 	// Place the new value into the object's history at the appropriate time
-	it->second.addInstant(new_latest);
+	it->second.addInstant(new_latest, write_time - world->history_kept);
 }
 
 void Timeline::CreateEvent::run(std::shared_ptr<WorldEvent> this_event) {
@@ -260,8 +279,6 @@ void Timeline::CreateEvent::run(std::shared_ptr<WorldEvent> this_event) {
 	//float time_at_obj = fmax(target_run_time, dispatch_time + glm::distance(new_object->position, dispatch_position) / max_info_speed);
 
 	// make a new instance by copying with the serializer
-	//std::shared_ptr<WorldObject> new_latest = new_object->deepCopy(world->registry.get());
-	std::shared_ptr<WorldObject> new_latest = std::static_pointer_cast<WorldObject>(world->registry->deepCopy(new_object.get(), new_object->getTypeId(world->registry.get())));
 	new_object->time = actual_run_time + world->min_event_duration; // create events still have event duration but the object couldn't move so it's just the min
 	new_object->id = object_id; // time and id aren't expected to be in the serializer so we have to set them manually
 	new_object->writing_event = this_event;
@@ -289,12 +306,12 @@ double Timeline::VoidEvent::getRunTime(Timeline* timeline, const glm::vec3& vant
 	}
 	// Get the latest instance for the object where we want to run the event
 	std::shared_ptr<WorldObject> latest = it->second.getLatest();
-	/*
+	
 	if (!latest) {
-		printf("Void event wants to run at empty history %I64d\n", object_id);
-		return FLT_MAX; // this really shouldnt ever happen
+		//printf("Void event wants to run at empty history %I64d\n", object_id);
+		return FLT_MAX;
 	}
-	*/
+	
 	actual_run_position = latest->position;
 	// can't run event at object before it's latest state is written 
 	actual_run_time = fmax(target_run_time, latest->time);
@@ -446,7 +463,7 @@ std::shared_ptr<const WorldObject> Timeline::readFar(int64_t object_id, const gl
 
 //Runs all events that could run before the given vantage
 void Timeline::run(const glm::vec3 vantage, double vantage_time) {
-
+	//auto start_time = now();
 	applyPendingRollbacks();
 
 	//runBatched(vantage, vantage_time);
@@ -458,47 +475,50 @@ void Timeline::run(const glm::vec3 vantage, double vantage_time) {
 	last_vantage = vantage;
 
 	
-	//only clean the history periodically since it's kind of expensive and having a little extra is fine
-	if (vantage_time - last_clean_time > history_kept * 0.5f) {
-		double clear_time = vantage_time - history_kept;
-		for (auto& [id, history] : objects) {
-			history.cleanHistory(clear_time);
-		}
+	int clean_cycles = 10 ;
+	//auto mid_time = now() ;
 		
-
-		std::map<double,std::vector<std::shared_ptr<WorldEvent>>> event_deletes; // map on time allows to be sorted by actual game time
-		for (auto& event : event_history) {
-			if (event->actual_run_time < clear_time) {
-					event_deletes[event->actual_run_time].push_back(event);
+	double clean_time = vantage_time - history_kept;
+	std::vector<int64_t> object_deletes ;
+	for (auto& [id, history] : objects) {
+		if(std::abs(id)%clean_cycles == runs%clean_cycles){
+			if(history.cleanHistory(clean_time)){
+				object_deletes.push_back(id) ;
 			}
 		}
-		for (auto&[time, event_list] : event_deletes) { // log in gametime order
-			for(auto&event : event_list){
-				if (WorldPlugin::log_type == WorldPlugin::FINAL_EVENTS) {
-					std::shared_ptr<WorldObject> o = objects[event->object_id].getLatest(); 
-					std::string cls = registry->class_name[o->getTypeId(registry.get())] ;
+	}
+	for (auto& id : object_deletes) {
+		objects.erase(id);
+	}
+
+	std::vector<double> bucket_deletes; // map on time allows to be sorted by actual game time
+	for(auto& [end_time, event_bucket]: event_history.history){
+		if(end_time < clean_time) { // if bucket is entirely before clean time
+			bucket_deletes.push_back(end_time) ;
+			for (auto& event : event_bucket) {
+				if (WorldPlugin::log_type == WorldPlugin::FINAL_EVENTS && event->actual_run_time >= 0) { // connection events have no runtime and aren't logged
 					VoidEvent* void_event = dynamic_cast<VoidEvent*>(event.get());
 					if (void_event != nullptr) {
-						std::string mth = registry->method_name[void_event->method_id] ;
-						WorldPlugin::log->log(cls + "::" + mth, event->object_id, event->actual_run_time, event->target_run_time, event->dispatch_time, event->actual_run_position.x, event->actual_run_position.y, event->actual_run_position.z);
+						std::string mth = registry->method_name[void_event->method_id];
+						WorldPlugin::log->logOrdered(event->actual_run_time,mth, event->object_id, event->actual_run_time, event->actual_run_position.x, event->actual_run_position.y, event->actual_run_position.z);
 					}
 					CreateEvent* create_event = dynamic_cast<CreateEvent*>(event.get());
 					if (create_event != nullptr) {
-						WorldPlugin::log->log(cls + "::" + cls, event->object_id, event->actual_run_time, event->target_run_time, event->dispatch_time, event->actual_run_position.x, event->actual_run_position.y, event->actual_run_position.z);
+						std::string cls = registry->class_name[create_event->new_object->getTypeId(registry.get())] ;
+						WorldPlugin::log->logOrdered(event->actual_run_time, "create " + cls, event->object_id, event->actual_run_time, event->actual_run_position.x, event->actual_run_position.y, event->actual_run_position.z);
 					}
 				}
-				//actually delete the event after logging
 				event->parent.reset(); // break the chain of event parents which would otherwise outlive the events indefinitely
-				event_history.erase(event);
 			}
 		}
-
-		last_clean_time = vantage_time;
+	}
+	
+	for (double end_time : bucket_deletes){
+		event_history.history.erase(end_time) ;
 	}
 
-	
 	world_lock.unlock();
-
+	runs++;
 }
 
 // Runs the next event that can run from the given vantage point if there is one
@@ -841,76 +861,20 @@ bool Timeline::couldEffect(const std::shared_ptr<WorldEvent>& cause, const std::
 	}
 }
 
-//rolls back all events and object changes that have occured withing the light cone of the trigger
-void Timeline::rollback(const glm::vec3& trigger_position, double trigger_time) {
-	world_lock.lock();
-	//printf("Rolling back to %f\n", trigger_time) ;
-	std::unordered_set<std::shared_ptr<WorldEvent>> event_rollbacks;
-	std::map<int64_t, double> object_rollbacks; // earliest event time on each object that needs rolled back
-	for (auto& h_event : event_history) {
-		// Is an already ran event in the light cone of the rollback?
-		if (h_event->actual_run_time  >= trigger_time + vantage_warp_fraction * preciseDistance(h_event->actual_run_position, trigger_position) / max_info_speed) {
-			event_unruns++;
-			event_rollbacks.insert(h_event);
-			// Keep track of how far we need to makerollbacks to objects affected by these events
-			auto it = object_rollbacks.find(h_event->object_id);
-			if (it == object_rollbacks.end()) {
-				object_rollbacks[h_event->object_id] = h_event->actual_run_time;
-			}
-			else {
-				it->second = fmin(it->second, h_event->actual_run_time);
-			}
-		}
-	}
-
-	//Find events that are pending that were spawned by an event that was rolled back
-	std::vector<std::shared_ptr<WorldEvent>> pending_rollbacks;
-	for (auto& p_event : pending_events) {
-		if (event_rollbacks.find(p_event->parent) != event_rollbacks.end()) {
-			pending_rollbacks.push_back(p_event);
-		}
-	}
-	// unpend events spawned by now rolled back events
-	for (auto& p_event : pending_rollbacks) {
-		pending_events.erase(p_event);
-	}
-
-	for (auto& event : event_rollbacks) {
-		event_history.erase(event); // remove form history
-		event->rollbacks++;
-		event->actual_run_time = -1.0 ;
-
-		// only repend if it wasn't spawned by another rolled back event
-		if (event_rollbacks.find(event->parent) == event_rollbacks.end()) {
-			pending_events.insert(event);
-		}
-	}
-
-	//Rollback the objects
-	for (auto& [id, time] : object_rollbacks) {
-		//printf("Deleting object %lld after %f\n", id, time);
-		objects[id].deleteAfter(time);
-		if (objects[id].history.empty()) {
-			objects.erase(id);
-		}
-	}
-
-	//last_vantage_time = trigger_time;
-	//runBatched(last_vantage,last_vantage_time) ;
-	world_lock.unlock();
-}
-
 //Returns all readable entities from the given vantage
 std::vector<std::shared_ptr<const WorldObject>> Timeline::observe(const glm::vec3& vantage, double vantage_time) {
 	world_lock.lock();
 	std::vector<std::shared_ptr<const WorldObject>> observed;
 	for (auto& [id, o] : objects) {
-		std::shared_ptr<const WorldObject> i = readFar(id, vantage, vantage_time);
-		if (i) {
-			observed.push_back(i);
+		if(o.observation_enabled){
+			std::shared_ptr<const WorldObject> i = o.readFar(vantage, vantage_time);
+			if (i) {
+				observed.push_back(i);
+			}
 		}
 	}
 	world_lock.unlock();
+	//printf("Observed: %d\n",(int)observed.size()) ;
 	return observed;
 }
 
@@ -932,25 +896,24 @@ void Timeline::applyPendingRollbacks(){
 	//printf(" %d Rolling back to %f\n", (int)pending_rollbacks.size(),earliest_trigger) ;
 	std::unordered_set<std::shared_ptr<WorldEvent>> event_rollbacks;
 	std::map<int64_t, double> object_rollbacks; // earliest event time on each object that needs rolled back
-	for (auto& h_event : event_history) {
-		// Is an already ran event in the light cone of a rollback?
-		if (h_event->actual_run_time >= earliest_trigger){
-			bool rolling_back = false;
-			for (auto& r : pending_rollbacks) {
-				rolling_back |= h_event->actual_run_time >= r.second + vantage_warp_fraction * preciseDistance(h_event->actual_run_position, r.first) / max_info_speed ;
-			}
-		
-
-			if(rolling_back) {
-				event_unruns++;
-				event_rollbacks.insert(h_event);
-				// Keep track of how far we need to makerollbacks to objects affected by these events
-				auto it = object_rollbacks.find(h_event->object_id);
-				if (it == object_rollbacks.end()) {
-					object_rollbacks[h_event->object_id] = h_event->actual_run_time;
+	for (auto& [end_time, event_bucket] : event_history.history) {
+		if (end_time >= earliest_trigger) { // only check buckets that aren't completely before earliest rollback
+			for (auto& h_event : event_bucket) {
+				bool rolling_back = false;
+				for (auto& r : pending_rollbacks) {
+					rolling_back |= h_event->actual_run_time >= r.second + vantage_warp_fraction * preciseDistance(h_event->actual_run_position, r.first) / max_info_speed ;
 				}
-				else {
-					it->second = fmin(it->second, h_event->actual_run_time);
+				if(rolling_back) {
+					event_unruns++;
+					event_rollbacks.insert(h_event);
+					// Keep track of how far we need to makerollbacks to objects affected by these events
+					auto it = object_rollbacks.find(h_event->object_id);
+					if (it == object_rollbacks.end()) {
+						object_rollbacks[h_event->object_id] = h_event->actual_run_time;
+					}
+					else {
+						it->second = fmin(it->second, h_event->actual_run_time);
+					}
 				}
 			}
 		}
@@ -981,9 +944,9 @@ void Timeline::applyPendingRollbacks(){
 
 	//Rollback the objects
 	for (auto& [id, time] : object_rollbacks) {
-		//printf("Deleting object %lld after %f\n", id, time);
+		//printf("Deleting object %lld after %lf\n", id, time);
 		objects[id].deleteAfter(time);
-		if (objects[id].history.empty()) {
+		if (objects[id].empty()) {
 			objects.erase(id);
 		}
 	}
@@ -1078,7 +1041,7 @@ Timeline::Timeline(std::shared_ptr<Registry>& r, CopyPacket& packet){
 		if(objects.find(object_id) == objects.end()){
 			objects.emplace(object_id, new_object);
 		}else{
-			objects[object_id].addInstant(new_object);
+			objects[object_id].addInstant(new_object, -FLT_MAX);
 		}
 		//printf("Adding copied object id: %lld  time:%f\n", new_object->id, new_object->time);
 	}
@@ -1119,7 +1082,7 @@ Timeline::Timeline(std::shared_ptr<Registry>& r, CopyPacket& packet){
 			std::shared_ptr<VoidEvent> event = std::make_shared<VoidEvent>(object_id, method_id, target_time, arg_serial);
 			event->dispatch_position = dispatch_position;
 			event->dispatch_time = dispatch_time;
-			event_history.emplace(event);
+			event_history.insert(event);
 		}
 		else if (event_type == CREATE_EVENT) {
 			const auto& [dispatch_position, dispatch_time, object_id, target_time, type_id, object_data] = deserialize<glm::vec3, double, int64_t, double, int, std::vector<char>>(event_serial);
@@ -1127,7 +1090,7 @@ Timeline::Timeline(std::shared_ptr<Registry>& r, CopyPacket& packet){
 			std::shared_ptr<CreateEvent> event = std::make_shared<CreateEvent>(object_id, obj, target_time);
 			event->dispatch_position = dispatch_position;
 			event->dispatch_time = dispatch_time;
-			event_history.emplace(event);
+			event_history.insert(event);
 
 		}
 	}
@@ -1154,10 +1117,15 @@ Timeline::CopyPacket Timeline::copy(double earliest_time) {
 	}
 
 	
-	for (auto& event : event_history) {
-		//event->print();
-		if (event->actual_run_time >= earliest_time) {
-			update.event_history.emplace_back(serializeWorldEvent(event));
+
+	for (auto& [end_time, event_bucket] : event_history.history) {
+		if (end_time >= earliest_time) { // only check buckets that aren't completely before earliest time
+			for (auto& event : event_bucket) {
+				//event->print();
+				if (event->actual_run_time >= earliest_time) {
+					update.event_history.emplace_back(serializeWorldEvent(event));
+				}
+			}
 		}
 	}
 
@@ -1167,13 +1135,12 @@ Timeline::CopyPacket Timeline::copy(double earliest_time) {
 			update.objects.push_back(serializeWorldObject(o));
 		}
 		std::vector<std::shared_ptr<WorldObject>> instants = history.getStateRange(earliest_time, FLT_MAX);
-
-		for (int k = (int)instants.size() -1; k >=0; k--) {//get state range is newest to oldest bbut for packet we need oldest to newest
+		for (int k = 0; k < instants.size(); k++) {
 			update.objects.push_back(serializeWorldObject(instants[k]));
 		}
 	}
 	external_events.clear(); // these aren't external anymore if we're doing a full copy after
-	//printf("Objects in copy packet: %d\n", (int)update.objects.size()) ;
+	printf("Objects in copy packet: %d  Events: %d\n", (int)update.objects.size(), (int)update.event_history.size()) ;
 	world_lock.unlock();
 	return update;
 

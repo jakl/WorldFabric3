@@ -42,6 +42,7 @@ void WorldPlugin::run(){
 		world.time_speed = (float)copy->extra_double_data[TIME_SPEED_EXTRA_INDEX] ;
 		world.vantage_point = copy->last_vantage;
 		world.current_time = copy->last_vantage_time ;
+		world.next_event_time = world.current_time + world.timeline->min_event_duration ;
 		world.system_time_of_current_time = now();
 		world.max_read_distance = copy->max_read_distance ;
 	}
@@ -87,6 +88,7 @@ void WorldPlugin::run(){
 			double expected_world_time = update_time + (ping *0.5 * world.time_speed);
 			double current_time = world.current_time;
 			world.current_time = current_time * (1.0 - clock_adjust_rate) + expected_world_time * clock_adjust_rate;
+			world.next_event_time = world.current_time + world.timeline->min_event_duration;
 			world.system_time_of_current_time = now();
 		}
 	}
@@ -101,22 +103,23 @@ void WorldPlugin::run(){
 		world.pending_local_events.clear();
 	}
 	
-	lock.unlock();
+	//lock.unlock(); // TODO figure out how to lock less agressively
 
 	// Run all the active timelines
 	for(auto& [name, world] : worlds){
 		// Run to the new time
 		world.current_time += dt * world.time_speed ;
 		world.system_time_of_current_time = now();
+		world.next_event_time = world.current_time + world.timeline->min_event_duration;
 		world.timeline->run(world.vantage_point,world.current_time) ; // Note we are not locked when actually doing the running which is 95% of time
-		lock.lock();
+		//lock.lock();
 		observation_buffer[name] = world.timeline->observe(world.vantage_point, world.current_time + observation_look_ahead); // buffer observations immediately after run so rollback can't be observed
 		viewCreateDestroy(name); // Make sure views are always inline with observations
-		lock.unlock();
+		//lock.unlock();
 		//printf("Runs: %d  Unruns: %d\n", Timeline::event_runs, Timeline::event_unruns) ;
 	}
 
-	lock.lock();
+	//lock.lock();
 	// Send my updates to the connections
 	double hash_time = 0 ; // TODO check for errors using a hash at fixed intervals?
 	for (auto& [name, world] : worlds) {
@@ -239,6 +242,7 @@ void WorldPlugin::run(const std::string& world_name, double dt){
 	if(worlds.find(world_name) != worlds.end()){
 		World& world = worlds[world_name] ;
 		world.current_time += dt ;
+		world.next_event_time = world.current_time + world.timeline->min_event_duration;
 		world.timeline->run(world.vantage_point, world.current_time);
 	}
 }
@@ -248,6 +252,11 @@ void WorldPlugin::run(const std::string& world_name, double dt){
 // Returns if successful (may fail if world_name is taken already or parameters are invalid
 bool WorldPlugin::createWorld(const std::string& world_name, float info_speed, float min_event_duration, float max_read_distance){
 	lock.lock() ;
+
+	if (clear_worlds) {
+		actuallyClearWorlds();
+	}
+
 	if(worlds.find(world_name) != worlds.end()){
 		lock.unlock();
 		return false;
@@ -563,10 +572,12 @@ void WorldPlugin::runConnect(const std::string& address, int port, const std::st
 	}
 	bool connected = client->connect(address, port);
 	if(!connected){
+		printf("IP connection failed\n");
 		disconnect();
 		connection_pending = false;
 		return ;
 	}
+	printf("Successfully connected by IP!\n");
 	lock.lock();
 	actuallyClearWorlds();
 	std::shared_ptr<Timeline::CopyPacket> empty_copy = std::shared_ptr<Timeline::CopyPacket>(new Timeline::CopyPacket());
@@ -630,6 +641,11 @@ bool WorldPlugin::connected(){
 }
 
 
+bool WorldPlugin::connectionPending(){
+	return connection_pending ;
+}
+
+
 
 // For the server: Check if a specific remote connection is still active
 bool WorldPlugin::connected(int id){
@@ -680,9 +696,11 @@ void WorldPlugin::onSocketConnect(int sender_id){
 
 //Called when a connection is closed, either remotely or because the socket holding it was closed
 void WorldPlugin::onSocketClose(int sender_id){
-	//printf("Got a socket close for %d!\n", sender_id);
-	connections[sender_id].disconnected = true ;
-	connections[sender_id].ready = true;
+	printf("Got a socket close for %d!\n", sender_id);
+	if(connections.find(sender_id) != connections.end()){
+		connections[sender_id].disconnected = true ;
+		connections[sender_id].ready = true;
+	}
 }
 
 WorldPlugin::~WorldPlugin(){

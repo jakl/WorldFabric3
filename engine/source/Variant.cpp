@@ -974,7 +974,7 @@ static inline void trim(std::string &s) {
 
 std::pair<Variant,int> Variant::parseJSONValue(const std::string& json, int value_start){
     Variant var ;
-    int c ;
+    int c  = 0;
     bool got_value =false ;
     for(c = value_start; c < json.length();c++){
         if(json[c] == '{'){
@@ -1133,7 +1133,7 @@ uint32_t Variant::murmurscramble(uint32_t k) {
 // It's in the public domain
 uint32_t Variant::murmur(const uint8_t* key, size_t len, uint32_t seed) {
     uint32_t h = seed;
-    uint32_t k;
+    uint32_t k = 0;
     /* Read in groups of 4. */
     for (size_t i = len >> 2; i; i--) {
         // Here is a source of differing results across endiannesses.

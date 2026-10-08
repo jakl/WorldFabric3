@@ -7,6 +7,7 @@
 #include <memory>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <map>
 #include <queue>
 #include <chrono>
@@ -175,7 +176,7 @@ public:
 	
 private:
 	std::shared_ptr<SOCKET> socket;
-	int port;
+	int port = 0;
 	std::map<int, std::shared_ptr<sockaddr_in>> clients; // connection id -> client address
 	std::thread thread ; // nonblocking socket has its own thread to wait for any packets
 	std::recursive_mutex lock ; // used to protect against modifying the socket while packets are being received
@@ -220,7 +221,7 @@ private:
 	int server_id = 0 ; //current server id, could change if closed and opened again
 	std::shared_ptr<sockaddr_in> server_address;// always a sockaddr_in but can'rt include winsock in the .h or it breaks ALOT
 	std::string server_ip ;
-	int port ;
+	int port = 0 ;
 	PacketReceiver* packet_receiver = nullptr;
 
 	std::thread thread; // nonblocking socket has its own thread to wait for any packets
@@ -290,7 +291,7 @@ public:
 
 private:
 	SOCKET socket; // socket used ot listen for new connections
-	int port;
+	int port = 0;
 	std::map<int, std::shared_ptr<Client>> clients; // connection id -> client address
 	std::thread thread; // nonblocking socket has its own thread to wait for connections
 	std::recursive_mutex lock; // used to protect against modifying the socket while packets are being received
@@ -333,7 +334,7 @@ private:
 	int server_id = 0; //current server id, could change if closed and opened again
 	std::shared_ptr<sockaddr_in> server_address;// always a sockaddr_in but can'rt include winsock in the .h or it breaks ALOT
 	std::string server_ip;
-	int port;
+	int port = 0;
 	PacketReceiver* packet_receiver = nullptr;
 	std::thread thread; // nonblocking socket has its own thread to wait for any packets
 	std::recursive_mutex lock; // used to protect against modifying the socket while packets are being received

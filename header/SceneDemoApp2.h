@@ -48,18 +48,18 @@ private:
 	//std::shared_ptr <ScreenShaderProgram>  light_program;
 	//std::shared_ptr<ScreenModel<ScreenPushConstants, AmbientComponent>> ambient_post_effect;
 	//std::shared_ptr<ScreenModel<ScreenPushConstants, LightComponent>> light_post_effect;
-	int ambient_effect_id;
-	int light_effect_id;
+	int ambient_effect_id = 0;
+	int light_effect_id = 0;
 
 	std::chrono::high_resolution_clock::time_point last_run_time;
 	std::chrono::high_resolution_clock::time_point current_time;
 
-	int fox_id;
-	int shop_id;
-	int shop_window_id;
-	glm::quat base_rotation;
-	glm::quat target_rot;
-	int mouse_particle_id;
+	int fox_id = 0;
+	int shop_id = 0;
+	int shop_window_id = 0;
+	glm::quat base_rotation{};
+	glm::quat target_rot{};
+	int mouse_particle_id = 0;
 
 	std::vector<int> cube_id;
 	std::vector<glm::mat4> cube_rot;

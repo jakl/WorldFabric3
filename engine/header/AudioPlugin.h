@@ -56,7 +56,7 @@ public:
 
 	class Source {
 	public:
-		ALuint source;
+		ALuint source = 0U;
 		int format = -1; // set when the first thing is queued and then everting else must be the same
 		float gain = 1.0f;
 		float pitch = 1.0f;
@@ -68,10 +68,10 @@ public:
 
 	class Sound {
 	public:
-		ALuint buffer;
-		int buffer_size;
-		int format;
-		int sample_rate;
+		ALuint buffer = 0U;
+		int buffer_size = 0;
+		int format = 0;
+		int sample_rate = 0;
 		int volume_group = 0;
 	};
 

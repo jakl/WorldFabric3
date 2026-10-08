@@ -240,8 +240,8 @@ bool SavePlugin::createFolder(const std::string& path) {
 
 std::string SavePlugin::getAppDataLocation(const std::string app_name) {
 
-	char* appdata_path;
-	size_t appdata_path_len;
+	char* appdata_path = nullptr;
+	size_t appdata_path_len = 0;
 	std::string apps_data_location = "";
 
 	if (_dupenv_s(&appdata_path, &appdata_path_len, "APPDATA") == 0) {

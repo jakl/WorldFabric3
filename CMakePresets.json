@@ -1,0 +1,92 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON", "WF_APP": "Chess" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "msvc-base",
+      "hidden": true,
+      "inherits": "base",
+      "architecture": { "value": "x64", "strategy": "external" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      }
+    },
+    {
+      "name": "gcc-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "x64-debug",
+      "displayName": "MSVC x64 Debug",
+      "inherits": "msvc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "x64-release",
+      "displayName": "MSVC x64 Release",
+      "inherits": "msvc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC (MinGW) Debug",
+      "inherits": "gcc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "GCC (MinGW) Release",
+      "inherits": "gcc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "narball",
+      "hidden": true,
+      "cacheVariables": { "WF_APP": "Narball" }
+    },
+    {
+      "name": "x64-debug-narball",
+      "displayName": "Narball - MSVC x64 Debug",
+      "inherits": [ "narball", "x64-debug" ]
+    },
+    {
+      "name": "x64-release-narball",
+      "displayName": "Narball - MSVC x64 Release",
+      "inherits": [ "narball", "x64-release" ]
+    },
+    {
+      "name": "gcc-debug-narball",
+      "displayName": "Narball - GCC (MinGW) Debug",
+      "inherits": [ "narball", "gcc-debug" ]
+    },
+    {
+      "name": "gcc-release-narball",
+      "displayName": "Narball - GCC (MinGW) Release",
+      "inherits": [ "narball", "gcc-release" ]
+    }
+  ],
+  "buildPresets": [
+    { "name": "x64-debug", "configurePreset": "x64-debug" },
+    { "name": "x64-release", "configurePreset": "x64-release" },
+    { "name": "gcc-debug", "configurePreset": "gcc-debug" },
+    { "name": "gcc-release", "configurePreset": "gcc-release" },
+    { "name": "x64-debug-narball", "configurePreset": "x64-debug-narball" },
+    { "name": "x64-release-narball", "configurePreset": "x64-release-narball" },
+    { "name": "gcc-debug-narball", "configurePreset": "gcc-debug-narball" },
+    { "name": "gcc-release-narball", "configurePreset": "gcc-release-narball" }
+  ]
+}

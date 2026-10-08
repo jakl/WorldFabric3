@@ -46,10 +46,10 @@ public:
 	static inline const int READY_FOR_SCENE = 56296549;//thread signal for when the scene waits to run
 
 	struct DefaultPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
 	};
 
 	class AbstractShaderSet {
@@ -74,44 +74,44 @@ public:
 	};
 
 	struct ScreenPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
 	};
 
 
 	struct TranslucentPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
-		VkDeviceAddress fragment_buffer;
-		VkDeviceAddress count_buffer;
-		int frame_width;
-		int frame_height;
-		int fragments;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
+		VkDeviceAddress fragment_buffer = 0;
+		VkDeviceAddress count_buffer = 0;
+		int frame_width = 0;
+		int frame_height = 0;
+		int fragments = 0;
 	};
 
 	struct TranslucentScreenPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
-		VkDeviceAddress fragment_buffer;
-		VkDeviceAddress count_buffer;
-		int frame_width;
-		int frame_height;
-		int fragments;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
+		VkDeviceAddress fragment_buffer = 0;
+		VkDeviceAddress count_buffer = 0;
+		int frame_width = 0;
+		int frame_height = 0;
+		int fragments = 0;
 	};
 
 
 	struct AmbientComponent {
-		glm::vec4 lightcolor;
+		glm::vec4 lightcolor{};
 	};
 
 	struct LightComponent {
-		glm::vec4 light_position;
-		glm::vec4 light_color;
-		glm::mat4 light_matrix;
+		glm::vec4 light_position{};
+		glm::vec4 light_color{};
+		glm::mat4 light_matrix{};
 	};
 
 
@@ -127,7 +127,7 @@ public:
 	template <typename PushConstants, typename VulkanInstance>
 	class GLTFShaderSet : public AbstractShaderSet{
 	public:
-		std::vector<std::shared_ptr<TriangleModel<PushConstants, GLTF::BufferVertex, VulkanInstance>>> morph_meshes ;
+		std::map<std::shared_ptr<GLTF>,std::vector<std::shared_ptr<TriangleModel<PushConstants, GLTF::BufferVertex, VulkanInstance>>>> morph_meshes ;
 		
 		GLTFShaderSet(int bones, std::shared_ptr<TriangleShaderProgram> main,std::shared_ptr<TriangleShaderProgram> shadow){
 			max_bones = bones;
@@ -190,7 +190,7 @@ public:
 			}
 
 			for(int k : morph_indices){ // keep references to the morphable part so we can quickly access it to morph later
-				morph_meshes.push_back(dynamic_pointer_cast<TriangleModel<PushConstants, GLTF::BufferVertex, VulkanInstance>>(gltf_meshes[k])) ;
+				morph_meshes[gltf_model].push_back(dynamic_pointer_cast<TriangleModel<PushConstants, GLTF::BufferVertex, VulkanInstance>>(gltf_meshes[k])) ;
 			}
 
 			return gltf_meshes;
@@ -202,7 +202,7 @@ public:
 			int j = 0 ;
 			//Shader set has renderables for each shader, so we need to push the morphs to all of them ever loaded
 			//each one should have a number of morphs equal to the size of the morphs array
-			for(auto& mesh : morph_meshes){
+			for(auto& mesh : morph_meshes[gltf_model]){
 				mesh->setModel(morphs[j%morphs.size()]->vertices, morphs[j%morphs.size()]->indices);
 				j++;
 			}
@@ -230,9 +230,9 @@ public:
 
 	class BoneOverride {
 	public:
-		glm::vec3 scale;
+		glm::vec3 scale{};
 		bool scale_override = false;
-		glm::quat orientation;
+		glm::quat orientation{};
 		bool orientation_override = false;
 	};
 
@@ -249,20 +249,21 @@ public:
 	public:
 		int node = -1;
 		int depth = -1; // Springs needs to be executed in depth order
-		glm::vec3 local_point; // The point in bone space this spring is controlling
-		glm::vec3 world_point; // The physically simulated point in World Space
-		glm::vec3 prev_world_point ; // We use verlet integration for stability so this implicitly holds the current velocity
-		glm::vec3 last_target ;
+		glm::vec3 local_point{}; // The point in bone space this spring is controlling
+		glm::vec3 world_point{}; // The physically simulated point in World Space
+		glm::vec3 prev_world_point{} ; // We use verlet integration for stability so this implicitly holds the current velocity
+		glm::vec3 last_target{} ;
+		bool reset = true ;
 		float half_return_time = 0.25f ; // the amoutn of time it takes a spring bone to return halfway to it's model position
 		float half_velocity_time = 0.03f ; // the amount fo time it takes aspring bone point to lsoe half of its velocity
-		glm::vec3 acceleration; //external force being applied
-		float collision_radius ;
+		glm::vec3 acceleration{}; //external force being applied
+		float collision_radius = 0.0F ;
 		std::vector<int> colliders ; // Indices into collider list of which colliders this needs to pay attention to
 	};
 
 	class Instance {
 	public:
-		glm::mat4 pose;
+		glm::mat4 pose{};
 		int transform_group = 0; // this instance also gets a group transform applied to it after its own pose
 		//glm::mat4 inv_pose;
 		std::shared_ptr<GLTF> skeleton;
@@ -460,9 +461,9 @@ public:
 
 	//Load any spring bone data from the skeleton of the given instance
 	// and enable it on that instance
-	void enableVRMSpringBones(int instance_id, float gravity_strength =10.0f , float collider_scale = 1.0f, float min_spring_collision_radius = 0.03f);
+	void enableVRMSpringBones(int instance_id, float gravity_strength =10.0f , float collider_scale = 0.98f, float min_spring_collision_radius = 0.03f);
 
-	// Remove any active spring bones onthe given instance
+	// Remove any active spring bones on the given instance
 	void clearSpringBones(int instance_id) ;
 
 	//Gets hte current world positions of a spring set on an instance

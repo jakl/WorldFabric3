@@ -1,4 +1,5 @@
 #include "AudioPlugin.h"
+#include <cstring>
 
 #define STB_VORBIS_IMPLEMENTATION
 #include "stb_vorbis.c"
@@ -38,10 +39,10 @@ void AudioPlugin::initialize() {
 void AudioPlugin::run() {
 	// Clear completed buffers
 	for (auto& [name, so] : source) {
-		int buffers_processed;
+		int buffers_processed = 0;
 		alGetSourcei(so.source, AL_BUFFERS_PROCESSED, &buffers_processed);
 		while (buffers_processed-- > 0) {
-			ALuint buffer;
+			ALuint buffer = 0;
 			alSourceUnqueueBuffers(so.source, 1, &buffer);
 		}
 	}
@@ -161,7 +162,7 @@ int AudioPlugin::amountQueued(int source_id) {
     if (source.find(source_id) == source.end()) {
         return 0;
     }
-    int queued;
+    int queued = 0;
     alGetSourcei(source[source_id].source, AL_BUFFERS_QUEUED, &queued);
     return queued;
 }
@@ -221,7 +222,7 @@ AudioPlugin::SoundData AudioPlugin::loadWAV(Variant& file_bytes) {
     data.makeFillableByteArray(size);
     file_bytes.readBytes(44, size, data.getByteArray());
 
-    unsigned int format;
+    unsigned int format = 0;
     if(channels == 1){
         if(bps == 8){
             format = AL_FORMAT_MONO8;

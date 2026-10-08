@@ -9,6 +9,8 @@
 #include "SavePlugin.h"
 
 #include "StatePlugin.h"
+#include "ViewPlugin.h"
+#include "local_ptr.h"
 
 #include "BallTestApp.h"
 #include "VulkanDemoApp.h"
@@ -20,6 +22,11 @@
 #include "MirrorApp.h"
 #include "TraceApp.h"
 #include "ConstraintTestApp.h"
+#include "CollisionTestApp.h"
+#include "PyramidApp.h"
+#include "NetPhysicsApp.h"
+
+#include "ChessApp.h"
 
 #include "Timeline.h"
 #include "VulkanPlugin.h"
@@ -33,21 +40,20 @@
 #include <set>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <chrono>
 #include <thread>
 
 using std::string;
-
+using namespace std::chrono_literals;
 
 
 std::shared_ptr<RenderTarget> createRenderTarget(int width, int height, VulkanPlugin* window) {
-
 	VkClearColorValue background_color = { 0.7f,0.7f,0.9f,1.0f };
 	VkClearColorValue background_normal = { 0.0f,0.0f,0.0f,0.0f };
 	VkClearColorValue background_point = { 0.0f,0.0f,0.0f,0.0f };
 	VkClearColorValue start_light = { 0.0f,0.0f,0.0f,0.0f };
 	VkClearColorValue panel_background = { 0.0f,0.0f,0.0f,0.0f };
-
 	//Initialize the images we will draw into
 	VkImageUsageFlags drawImageUsages = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	std::shared_ptr<WFImage> color_image = std::shared_ptr<WFImage>(new WFImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, drawImageUsages));
@@ -61,7 +67,7 @@ std::shared_ptr<RenderTarget> createRenderTarget(int width, int height, VulkanPl
 
 	std::shared_ptr<RenderTarget> target = std::shared_ptr<RenderTarget>(new RenderTarget());
 
-	target->setImages({ color_image, normal_image, point_image,final_image, panel_image }, { background_color, background_normal, background_point, start_light, panel_background }, depth_image, final_image);
+	target->setImages({ color_image, normal_image, point_image,final_image, panel_image }, { background_color, background_normal, background_point, start_light, panel_background }, depth_image, color_image); // PanelPost composites final_image (blurred under panels) back into color_image
 	target->createExtendedFragments(4,8,window);
 	target->enableScreenResize(true) ;
 	return target;
@@ -83,7 +89,7 @@ std::pair< std::shared_ptr<TriangleShaderProgram>, std::shared_ptr<TriangleShade
 		triangleFragShader,
 		sizeof(ScenePlugin::DefaultPushConstants),
 		num_textures,
-		VK_CULL_MODE_FRONT_BIT, // TODO switch back to front bit for performance
+		VK_CULL_MODE_FRONT_BIT,
 		window->window_target,
 		OVERWRITE
 	));
@@ -171,11 +177,11 @@ ScenePlugin* setUpScene(VulkanPlugin* window, OpenXRPlugin* xr){
 
 	scene->setLightProgram(light_shader);
 	vkDestroyShaderModule(window->device, light_shader, nullptr);
-	ScenePlugin::LightComponent lc ;
+	ScenePlugin::LightComponent lc{} ;
 	
 	
 	lc.light_color = glm::vec4(0.01, 0.01, 0.01, 1);
-	scene->createLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(glm::vec3(-5, 15, -5), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), 0.55f, 30, 1024, 0, lc);
+	scene->createLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(glm::vec3(-5, 15, -5), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), 0.55f, 30, 2048, 0, lc);
 	
 	auto shaders1 = loadSceneShader(scene, window, "./shader/GLTF1.vert.spv", "./shader/GLTF.frag.spv", "./shader/GLTFShadow1.vert.spv", "./shader/GLTFShadow.frag.spv");
 	scene->addDefaultShader<ScenePlugin::DefaultPushConstants, GLTF::Instance1>(shaders1.first, shaders1.second, 1);
@@ -202,7 +208,7 @@ ScenePlugin* setUpScene(VulkanPlugin* window, OpenXRPlugin* xr){
 	//std::vector< std::shared_ptr<VulkanImage>> screen_images = {window_color_image, window_normal_image, window_point_image };
 	auto ambient_program = std::shared_ptr<ScreenShaderProgram>(new ScreenShaderProgram(window->device, ambient_shader, sizeof(ScenePlugin::ScreenPushConstants), window->window_target->images, 16));
 	auto ambient_post_effect = std::shared_ptr<ScreenModel<ScenePlugin::ScreenPushConstants, ScenePlugin::AmbientComponent>>(new ScreenModel<ScenePlugin::ScreenPushConstants, ScenePlugin::AmbientComponent>(ambient_program));
-	std::vector<ScenePlugin::AmbientComponent> ambient_components = { {glm::vec4(0.5,0.5,0.5,1)} };
+	std::vector<ScenePlugin::AmbientComponent> ambient_components = { {glm::vec4(0.6,0.6,0.6,1)} };
 	ambient_post_effect->setModel(ambient_components);
 	ambient_post_effect->setConstantLocations(&ambient_post_effect->push_constants.world_matrix, &ambient_post_effect->push_constants.camera_position, &ambient_post_effect->push_constants.component_buffer);
 	ambient_post_effect->phase = ScenePlugin::LIGHT_PHASE;
@@ -321,7 +327,7 @@ void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, const std:
 
 	std::shared_ptr<SavePlugin> files(new SavePlugin());
 	addTool(files);
-	std::shared_ptr<SteamworksPlugin> steamworks(new SteamworksPlugin(4404880, command));
+	std::shared_ptr<SteamworksPlugin> steamworks(new SteamworksPlugin(3485250, command));
 	addTool(steamworks);
 	std::shared_ptr<AudioPlugin> sound_system(new AudioPlugin());
 	addTool(sound_system);
@@ -333,6 +339,8 @@ void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, const std:
 	addTool(worlds);
 	std::shared_ptr<OpenXRPlugin> openXR(new OpenXRPlugin("./assets/controller_actions.json"));
 	addTool(openXR);
+	std::shared_ptr<ViewPlugin> view(new ViewPlugin());
+	addTool(view);
 
 	
 	std::unordered_set<std::shared_ptr<RenderTarget>> render_targets ;
@@ -378,54 +386,74 @@ void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, const std:
 	plugins.push_back(scene);
 	plugins.push_back(panels);
 	plugins.push_back(steamworks);
-
+	plugins.push_back(view);
 }
 
+
+// Selected at configure time with -DWF_APP=<name>; see WF_APPS in CMakeLists.txt
+#ifndef WF_APP
+#define WF_APP "Chess"
+#endif
+
+template <class App>
+void startApp(StatePlugin* app) {
+	app->add(App::state_name, std::make_shared<App>());
+	app->setState(App::state_name);
+}
+
+struct AppEntry {
+	std::string_view name;
+	void (*start)(StatePlugin*);
+};
+
+// Narball apps replace exampleMain entirely, so they aren't state machine entries
+struct NarballEntry {
+	std::string_view name;
+	Narball::AppType type;
+};
+
+constexpr NarballEntry narball_apps[] = {
+	{ "Narball", Narball::GAME },
+	{ "NarballServer", Narball::DEDICATED_SERVER },
+	{ "NarballDesync", Narball::DESYNC_CHECKER },
+};
+
+constexpr AppEntry apps[] = {
+	{ "Chess", startApp<Chess::ChessApp> },
+	{ "VulkanDemo", startApp<VulkanDemoApp> },
+	{ "SceneDemo", startApp<SceneDemoApp> },
+	{ "SceneDemo2", startApp<SceneDemoApp2> },
+	{ "BallTest", startApp<BallTestApp> },
+	{ "SocketTest", startApp<SocketTest> },
+	{ "BallThrow", startApp<BallThrowApp> },
+	{ "Mirror", startApp<MirrorApp> },
+	{ "Trace", startApp<TraceApp> },
+	{ "CollisionTest", startApp<CollisionTestApp> },
+	{ "ConstraintTest", startApp<ConstraintTestApp> },
+	{ "Pyramid", startApp<PyramidApp> },
+	{ "NetPhysics", startApp<NetPhysicsApp> },
+};
+
+template <class Entry, size_t N>
+constexpr const Entry* findApp(const Entry (&table)[N], std::string_view name) {
+	for (const Entry& entry : table) {
+		if (entry.name == name) {
+			return &entry;
+		}
+	}
+	return nullptr;
+}
+
+constexpr const NarballEntry* narball_app = findApp(narball_apps, WF_APP);
+constexpr const AppEntry* selected_app = findApp(apps, WF_APP);
+
+static_assert(narball_app != nullptr || selected_app != nullptr, "WF_APP must name an entry in the narball_apps or apps table in Main.cpp");
 
 void setupGameStates() {
-
-	VulkanPlugin* window = getTool<VulkanPlugin>();
-	OpenXRPlugin* xr = getTool<OpenXRPlugin>();
-	ScenePlugin* scene = getTool<ScenePlugin>();
-	ParticlePlugin* particles = getTool<ParticlePlugin>();
-	WorldPlugin* worlds = getTool<WorldPlugin>();
-	StatePlugin* app = getTool<StatePlugin>();
-
-
-	//app->add(VulkanDemoApp::state_name, std::shared_ptr<VulkanDemoApp>(new VulkanDemoApp()));
-	//app->setState(VulkanDemoApp::state_name);
-
-	//app->add(SceneDemoApp::state_name, std::shared_ptr<SceneDemoApp>(new SceneDemoApp()));
-	//app->setState(SceneDemoApp::state_name);
-
-	//app->add(SceneDemoApp2::state_name, std::shared_ptr<SceneDemoApp2>(new SceneDemoApp2()));
-	//app->setState(SceneDemoApp2::state_name);
-
-	//app->add(BallTestApp::state_name, std::shared_ptr<BallTestApp>(new BallTestApp()));
-	//app->setState(BallTestApp::state_name);
-
-	
-
-	//app->add(SocketTest::state_name, std::shared_ptr<SocketTest>(new SocketTest()));
-	//app->setState(SocketTest::state_name);
-
-	//app->add(BallThrowApp::state_name, std::shared_ptr<BallThrowApp>(new BallThrowApp()));
-	//app->setState(BallThrowApp::state_name);
-
-	//app->add(MirrorApp::state_name, std::shared_ptr<MirrorApp>(new MirrorApp()));
-	//app->setState(MirrorApp::state_name);
-
-	//app->add(TraceApp::state_name, std::shared_ptr<TraceApp>(new TraceApp()));
-	//app->setState(TraceApp::state_name);
-
-	app->add(ConstraintTestApp::state_name, std::shared_ptr<ConstraintTestApp>(new ConstraintTestApp()));
-	app->setState(ConstraintTestApp::state_name);
+	printf("Starting app %s\n", WF_APP);
+	selected_app->start(getTool<StatePlugin>());
 }
 
-int debugMain(int argc, char* argv[]) {
-	CSVLog::findDesync({"server.csv", "client.csv"}, "time", 1.0) ;
-	
-}
 
 int exampleMain(int argc, char* argv[]) {
 	std::string command_line = argv[0];
@@ -434,7 +462,7 @@ int exampleMain(int argc, char* argv[]) {
 	}
 	printf("Command: %s\n", command_line.c_str());
 
-	SteamworksPlugin::enabled = false; // can turn this on when you've got your own steam app id you want to boot
+	SteamworksPlugin::enabled = true; // can turn this on when you've got your own steam app id you want to boot
 	OpenXRPlugin::ENABLED = false ; // Enable this for VR support
 	if (SteamworksPlugin::wants_to_exit) {
 		printf("exiting because Steamworks plugin wanted to.\n");
@@ -481,8 +509,8 @@ int exampleMain(int argc, char* argv[]) {
 		window->enableRenderTiming(concat("./performance_log_", t) + ".csv");
 	}
 
-	//WorldPlugin::enableEventLogging(concat("./event_log_", t) +" .csv", WorldPlugin::FINAL_EVENTS);
-	//WorldPlugin::enableEventLogging(concat("./event_log_", t) + " .csv", concat("./extended_log_", t) + " .csv", WorldPlugin::FINAL_EVENTS);
+	WorldPlugin::enableEventLogging(concat("./event_log_", t) +".csv", WorldPlugin::FINAL_EVENTS);
+	//WorldPlugin::enableEventLogging(concat("./event_log_", t) + ".csv", concat("./extended_log_", t) + " .csv", WorldPlugin::FINAL_EVENTS);
 
 	std::map<int, std::string > plugin_name;
 	plugin_name[0] = "openXR";
@@ -495,24 +523,28 @@ int exampleMain(int argc, char* argv[]) {
 	plugin_name[7] = "scene";
 	plugin_name[8] = "panels";
 	plugin_name[9] = "steam";
+	plugin_name[10] = "view";
 	
 	AsyncPlugin::startPlugins(plugins);
 
 	//Run main loop until told to stop
 	while (flag_set->getInt(AsyncPlugin::SHUTDOWN_FLAG) == 0) {
 		auto sync_start = now();
-		AsyncPlugin::runPlugins(plugins);
+		bool ran = AsyncPlugin::runPlugins(plugins);
 		long sync_time = microsBetween(sync_start, now());
 		//Stagger the start of the plugins over the first third of the frame time
 		//This makes the ideal execution order amd lowest input lag most likely, but they can still overlap if they need to to maintain fps
 		int stagger_step = (int)(sync_time / (3 * plugins.size()));
+		if(stagger_step > 1000){ // prevent death spiral from a single slow frame
+			stagger_step = 0 ;
+		}
 		int stagger = 0;
 		for (auto& p : plugins) {
 			p->stagger_micros = stagger;
 			stagger += stagger_step;
 		}
 
-		if (display_profile) {
+		if (display_profile && ran) {
 			frames++;
 			std::shared_ptr<CSVLog>& log = VulkanPlugin::timing_log;
 			int micros = microsBetween(last_second_time, now());
@@ -536,18 +568,41 @@ int exampleMain(int argc, char* argv[]) {
 	thread_signals->signalAll();
 	printf("joining threads...\n");
 	AsyncPlugin::stopPlugins(plugins);
+	
+	ContentAddressedStorage::shutting_down = true; // prevents cricular reference crash on shutdowm
+	
 
 	// World Plugin makes more threads with its sockets that need to be cleaned up to not get an error on exit
 	WorldPlugin* worlds = getTool<WorldPlugin>();
+	SteamworksPlugin* steam = getTool<SteamworksPlugin>();
 	if (worlds) {
 		printf("Cleaning up sockets...\n");
 		worlds->disconnect();
+		steam->disconnect();
+	}
+
+	VulkanPlugin* window = getTool<VulkanPlugin>();
+	while(window->sdl_ready){ // wait for SDL event processing to stop
+		std::this_thread::sleep_for(10ms);
 	}
 
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
-	//Narball::main(argc, argv);
-	exampleMain(argc, argv);
+	_set_error_mode(_OUT_TO_STDERR);
+	if constexpr (narball_app != nullptr) {
+		Narball::which_app = narball_app->type;
+		return Narball::main(argc, argv);
+	}
+	else {
+		return exampleMain(argc, argv);
+	}
+	//CSVLog::findDesync({ "event_log_1.csv", "event_log_2.csv" }, "time", 1.0);
+}
+
+int debugMain(int argc, char* argv[]) {
+	_set_error_mode(_OUT_TO_STDERR);
+	//CSVLog::findDesync({"server.csv", "client.csv"}, "time", 1.0) ;
+	return exampleMain(argc, argv);
 }

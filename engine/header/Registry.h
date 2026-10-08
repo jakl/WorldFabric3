@@ -113,7 +113,7 @@ struct is_pair<std::pair<F, S>> : std::true_type {};
 template<typename T>
 inline constexpr bool is_pair_v = is_pair<T>::value;
 
-// --- "any map" detection (std::map or std::unordered_map) ---
+// map detection (std::map or std::unordered_map)
 template<typename T> struct is_any_map : std::false_type {};
 template<typename K, typename V, typename C, typename A>
 struct is_any_map<std::map<K, V, C, A>> : std::true_type {};
@@ -122,7 +122,7 @@ struct is_any_map<std::unordered_map<K, V, H, Eq, A>> : std::true_type {};
 template<typename T>
 inline constexpr bool is_any_map_v = is_any_map<T>::value;
 
-// --- "any set" detection (std::set or std::unordered_set) ---
+// set detection (std::set or std::unordered_set)
 template<typename T> struct is_any_set : std::false_type {};
 template<typename K, typename C, typename A>
 struct is_any_set<std::set<K, C, A>> : std::true_type {};
@@ -132,13 +132,22 @@ template<typename T>
 inline constexpr bool is_any_set_v = is_any_set<T>::value;
 
 
-// --- detect if getStructure exists
+// detect if getStructure exists
 template<class T, class = void> struct has_getStructure : std::false_type {};
-
 template<class T> // getStructure should always have a non const reference param, but this should work with const or not reference
 struct has_getStructure<T, std::void_t<decltype(getStructure(std::declval< std::add_lvalue_reference_t<std::remove_cv_t<T>> >()))>>
 	: std::true_type {};
 template<typename T> inline constexpr bool has_getStructure_v = has_getStructure<T>::value;
+
+// detect if onDeserialize exists
+template<class T, class = void> struct has_onDeserialize : std::false_type {};
+template<class T>
+struct has_onDeserialize<T, std::void_t<decltype(std::declval<T>().onDeserialize())>>
+	: std::true_type {
+};
+template<typename T> inline constexpr bool has_onDeserialize_v = has_onDeserialize<T>::value;
+
+
 
 // detect if can treat like a tuple
 template<class, class = void> struct is_tuple_like : std::false_type {};
@@ -218,7 +227,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
     using RawType = std::remove_cvref_t<T>;
     if constexpr (std::is_same_v<RawType, std::string>) {
         //Deserialize string
-        size_t len;
+        size_t len = 0;
         std::memcpy(&len, data, sizeof(len));
         data += sizeof(len);
         std::string result(data, len);
@@ -234,7 +243,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
     }
     else if constexpr (is_vector_v<RawType>) {
 		// Deserialize vector
-        size_t size;
+        size_t size = 0;
         std::memcpy(&size, data, sizeof(size));
         data += sizeof(size);
         RawType result;
@@ -245,7 +254,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
         return result;
     }else if constexpr (is_any_set_v<RawType>) {
 		// Deserialize set or unordered_set
-		size_t size;
+		size_t size = 0;
 		std::memcpy(&size, data, sizeof(size));
 		data += sizeof(size);
 		RawType result;
@@ -261,7 +270,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
 		return result;
 	}else if constexpr (is_any_map_v<RawType>) {
 		// Deserialize map or unordered_map
-		size_t size;
+		size_t size = 0;
 		std::memcpy(&size, data, sizeof(size));
 		data += sizeof(size);
 		RawType result;
@@ -271,11 +280,13 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
 			result.emplace(std::move(key), std::move(value));
 		}
 		return result;
-	}
-	else if constexpr (has_getStructure_v<RawType>) {
+	}else if constexpr (has_getStructure_v<RawType>) { // Custom objects typically use this
 		RawType result ;
 		auto ref_tuple = getStructure(result);
 		deserializeTupleArg(data, ref_tuple);
+		if constexpr (has_onDeserialize_v<RawType>) {
+			result.onDeserialize(); // Call any post-deserialization logic if it exists
+		}
 		return result ;
 	} else if constexpr (is_tuple_like_v<RawType>) {
 		//DeserializeTuple
@@ -374,6 +385,12 @@ inline void deserializeInto(T& obj, const std::vector<char>& serial) {
     );
 }
 
+template<typename T>
+inline T deserializeValue(const std::vector<char>& serial) {
+	const char* ptr = serial.data();
+	return deserializeArg<T>(ptr) ;
+}
+
 // Runs a class method on a shared_ptr to an object with the arguments given as bytes generated from serialize(args)
 template <typename T, typename Ret, typename... Args>
 inline Ret executeSerialized(std::shared_ptr<T> obj, Ret(T::* method)(Args...), const std::vector<char>& args_serial) {
@@ -432,7 +449,9 @@ int64_t hashRaw(const T& obj) {
 // Convert member function pointer to a key for reverse lookups of id from function pointer
 template <typename T, typename Ret, typename... Args>
 size_t methodPointerToKey(Ret(T::* method)(Args...)) {
-    return hashRaw(method);
+	// The first 8 bytes are the pointer in memory to the function
+	// Any subsequent bytes can vary based on inheritance or casting, so we want to ignore them so it always maatches one registered function
+	return *reinterpret_cast<size_t*>(&method) ;
 }
 
 //AbstractVoidMethod type allows differently templated methods to live in the same map in the registry 
@@ -505,7 +524,7 @@ inline void polarDecompose(const glm::mat3& M, glm::quat& outRot, glm::mat3& out
 	z = glm::normalize(glm::cross(x,y));
 	y = glm::normalize(glm::cross(z,x));
 	
-	glm::mat3 R;
+	glm::mat3 R{};
 	R[0] = x;
 	R[1] = y;
 	R[2] = z;
@@ -522,15 +541,15 @@ inline glm::mat4 interpolate(const glm::mat4& A, const glm::mat4& B, float t){
 	glm::mat3 linA = glm::mat3(A);
 	glm::mat3 linB = glm::mat3(B);
 
-	glm::quat rotA, rotB;
-	glm::mat3 stretchA, stretchB;
+	glm::quat rotA{}, rotB{};
+	glm::mat3 stretchA{}, stretchB{};
 	polarDecompose(linA, rotA, stretchA);
 	polarDecompose(linB, rotB, stretchB);
 
 	glm::quat rot = glm::slerp(rotA, rotB, t);
 
-	//linearly interpolate componentwise for scale andshear
-	glm::mat3 stretch ;
+	//linearly interpolate componentwise for scale and shear
+	glm::mat3 stretch{} ;
 	for(int k = 0; k < 3;k++){
 		for(int j=0;j<3;j++){
 			stretch[k][j] = stretchA[k][j] * (1.0f-t) + stretchB[k][j] * t ;
@@ -543,6 +562,19 @@ inline glm::mat4 interpolate(const glm::mat4& A, const glm::mat4& B, float t){
 
 	return result;
 }
+
+/*
+template<class T>
+inline std::vector<T> interpolate(const std::vector<T>& a, const std::vector<T>& b, float t){
+	std::vector<T> c ;
+	printf("inerpolating vector!\n");
+	for(int k = 0 ; k < std::min(a.size(), b.size()) ; k++){
+		c.push_back(interpolate(a[k],b[k]),t) ;
+	}
+	return c ;
+}
+*/
+
 
 // For any undefined data type interpolate will do nearest neighbor
 template<class T>
@@ -582,7 +614,7 @@ public:
 	virtual void destroyedBase() = 0;
 };
 
-//This is the class youwant to override for your views and template on what is being viewed
+//This is the class you want to override for your views and template on what is being viewed
 template <typename T>
 class ObjectView : public BaseObjectView {
 	//static_assert(std::is_base_of<WorldObject, T>::value, "View template must inherit from WorldObject.");
@@ -629,8 +661,7 @@ public:
 
     // Adds a class to the registry
     template<typename T>
-    inline int registerClass(const std::string& debug_name) {
-        //std::cout << "Registering class: " << typeid(T).name() << "\n";
+    inline int registerClass(const std::string& debug_name) {   
         //check if the class being registered has a getStructure implementation that returns a nonempty Tuple
         T new_object;
         auto structure = getStructure(new_object);
@@ -652,6 +683,7 @@ public:
 
         type_to_id[std::type_index(typeid(T))] = id;
 		class_name[id] = debug_name;
+		std::cout << "Registering class: " << typeid(T).name() << " == " << debug_name << " id = " << id << "\n";
         return id;
     }
 

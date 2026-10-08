@@ -476,7 +476,7 @@ public:
 
 		int total = 0 ;
 		int close = 0 ;
-		glm::vec2 close_error ;
+		glm::vec2 close_error{} ;
 		float total_error = 0 ;
 	
 

@@ -44,7 +44,7 @@ namespace Narball {
 
 
 	private:
-		int64_t lobby_id ;
+		int64_t lobby_id = 0LL ;
 		std::shared_ptr<const Lobby> lobby;
 		int last_lobby_state = Lobby::CLOSED ;
 		double time_lobby_started = 0;
@@ -52,7 +52,7 @@ namespace Narball {
 		float tick_interval = 1.0f / 60.0f;
 		float ball_radius = 0.2f;
 		bool match_closing = false;
-		int64_t match_id ;
+		int64_t match_id = 0LL ;
 		static inline glm::vec2 min_arena = glm::vec2(-8, -4.5);
 		static inline glm::vec2 max_arena = glm::vec2(8, 4.5);
 		std::chrono::high_resolution_clock::time_point last_lobby_countdown_reset = now();

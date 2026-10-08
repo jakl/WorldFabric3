@@ -19,35 +19,23 @@
 #include "stb_image.h"
 
 
+using namespace std::chrono_literals;
+
 // Boots SteamVR and sets up openGL and links to controllers and other hardware
 VulkanPlugin::VulkanPlugin(const std::string& title, bool vsync, bool fullscreen) {
 		this->title = title;
 		vsync_enabled = vsync ;
-		// We initialize SDL and create a window with it. 
-		SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
-
-		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-
-		window = SDL_CreateWindow(
-			title.c_str(),
-			window_width,
-			window_height,
-			window_flags
-		);
-
-		if(fullscreen){
-			SDL_SetWindowFullscreen(window, SDL_TRUE);
-			SDL_GetWindowSize(window, &window_width, &window_height);
-		}
-
-		if (window == NULL) {
-			printf("%s - Window could not be created! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
-		}
-		using namespace std::chrono_literals;
+		this->fullscreen = fullscreen ;
+		
+		SDL_thread = std::thread(&VulkanPlugin::runSDLThread, this);
+		SDL_thread.detach();
+		
 		std::this_thread::sleep_for(100ms) ;
+		while(!sdl_ready){
+			std::this_thread::sleep_for(20ms);
+		}
 
 		initVulkan();
-		SDL_StartTextInput();
 		async_enabled = false; // Needs to run on main thread to access vulkan
 }
 
@@ -56,9 +44,43 @@ void VulkanPlugin::initialize() {
 	
 }
 
+void VulkanPlugin::runSDLThread(){
+	// We initialize SDL and create a window with it. 
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+
+	window = SDL_CreateWindow(
+		title.c_str(),
+		window_width,
+		window_height,
+		window_flags
+	);
+
+	if (fullscreen) {
+		SDL_SetWindowFullscreen(window, SDL_TRUE);
+		SDL_GetWindowSize(window, &window_width, &window_height);
+	}
+
+	if (window == NULL) {
+		printf("%s - Window could not be created! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
+	}
+	using namespace std::chrono_literals;
+	std::this_thread::sleep_for(100ms);
+
+	SDL_StartTextInput();
+	sdl_ready = true ;
+
+	
+	while(!stopped){
+		processInput(); 
+		std::this_thread::sleep_for(5ms);
+	}
+	sdl_ready = false;
+}
+
 // pushes image on render target onto window and updates button and mouse
 void VulkanPlugin::run() {
-
 	// Clear out any images and buffers whose shared_ptr handles have been lost
 	VulkanBuffer::buffer_lock.lock();
 	std::chrono::high_resolution_clock::time_point current_time = now();
@@ -66,7 +88,7 @@ void VulkanPlugin::run() {
 	VulkanBuffer::vulkan_buffers_to_destroy.clear();
 	std::vector<BufferToDestroy> vulkan_buffers_to_still_destroy;
 	for (BufferToDestroy& buffer : buffers_to_process) {
-		if (millisBetween(buffer.time, current_time) > millis_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
+		if (millisBetween(buffer.time, current_time) > millis_to_hold_buffer && frame_number >= buffer.frame + frames_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
 			destroyBuffer(buffer);
 		}
 		else {
@@ -80,7 +102,7 @@ void VulkanPlugin::run() {
 	std::vector<ImageToDestroy> images_to_process = VulkanImage::vulkan_images_to_destroy; // copy to reduce async nonsense
 	VulkanImage::vulkan_images_to_destroy.clear();
 	for (ImageToDestroy& image : images_to_process) {
-		if (millisBetween(image.time, current_time) > millis_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
+		if (millisBetween(image.time, current_time) > millis_to_hold_buffer && frame_number >= image.frame + frames_to_hold_buffer) { // buffers hang around for a bit to allow pending off thread actions to complete
 			destroyVulkanImage(image);
 		}else {
 			vulkan_images_to_still_destroy.push_back(image);
@@ -116,17 +138,16 @@ void VulkanPlugin::run() {
 	lock.unlock();
 
 
-	processInput(); // process input both before and after draw to reduce input latency
-
 	if(!minimized){
 		draw();
 	}
 	
-	processInput(); // process input both before and after draw to reduce input latency
 
 	lock.lock();
 	if (resize_requested) {
 		vkDeviceWaitIdle(device);
+		completed_frame = std::max(completed_frame, frame_number - 1);
+		destroyFinishedGPUBuffers();
 		SDL_GetWindowSize(window, &window_width, &window_height);
 		destroySwapchain(vkbSwapchain, device);
 		createSwapchain(window_width, window_height, VK_FORMAT_B8G8R8A8_UNORM, physical_device, device, SDL_vulkan_surface);
@@ -290,9 +311,12 @@ void VulkanPlugin::initVulkan(){
 	auto inst_ret = inst.require_api_version(1, 3, 0)
 		.build();
 
-	if(inst_ret.vk_result() != VK_SUCCESS){
+	if (!inst_ret && !inst_ret.has_value() && inst_ret.vk_result() != VK_SUCCESS) {
+		// It is now safe to check the error code because we know it failed
 		printf("Vulkan Instantiation failed, type code %d result : %d\n", inst_ret.error().value(), inst_ret.vk_result()) ;
-		return ;
+		return;
+	} else if (!inst_ret && !inst_ret.has_value()) {
+		printf("Failed to create vulkan instance: %d\n", inst_ret.error().value());
 	}
 	vkb::Instance vkb_inst = inst_ret.value();
 
@@ -571,7 +595,32 @@ std::shared_ptr<VulkanBuffer> VulkanPlugin::createVulkanBuffer(size_t allocSize,
 	return newBuffer;
 }
 
+void VulkanPlugin::destroyAfterGPU(VkBuffer buffer, VkDeviceMemory memory){
+	if (buffer == VK_NULL_HANDLE && memory == VK_NULL_HANDLE) {
+		return;
+	}
+	std::lock_guard<std::mutex> guard(gpu_buffers_lock);
+	gpu_buffers_to_destroy.push_back({ buffer, memory, frame_number });
+}
+
+void VulkanPlugin::destroyFinishedGPUBuffers(){
+	std::lock_guard<std::mutex> guard(gpu_buffers_lock);
+	std::erase_if(gpu_buffers_to_destroy, [this](const GPUBufferToDestroy& retired) {
+		if (retired.frame > completed_frame) {
+			return false;
+		}
+		if (retired.buffer) {
+			vkDestroyBuffer(device, retired.buffer, nullptr);
+		}
+		if (retired.memory) {
+			vkFreeMemory(device, retired.memory, nullptr);
+		}
+		return true;
+	});
+}
+
 void VulkanPlugin::destroyBuffer(BufferToDestroy& buffer){
+	// Buffers are persistently mapped (VMA_ALLOCATION_CREATE_MAPPED_BIT), so VMA unmaps them itself on destruction
 	vmaDestroyBuffer(VMA_allocator, buffer.buffer, buffer.allocation);
 }
 
@@ -688,16 +737,18 @@ void VulkanPlugin::processInput(){
 
 
 void VulkanPlugin::draw(){
-
 	auto current_frame = frames[frame_number % CHAIN_FRAMES];
 	//wait until the gpu has finished rendering the last frame. Timeout in micros
-	VK_CHECK(vkWaitForFences(device, 1, &current_frame.render_fence, true, 500000000));
+	VK_CHECK(vkWaitForFences(device, 1, &current_frame.render_fence, true, 10000000)); // continue in 1/100th of a second regardless to not block other plugins
+	// this fence was last submitted no earlier than CHAIN_FRAMES frames ago, and the queue finishes submissions in order
+	completed_frame = std::max(completed_frame, frame_number - (int)CHAIN_FRAMES);
+	destroyFinishedGPUBuffers();
 	logTimes();
 
 	//current_frame._deletionQueue.flush();
 
 	//request image from the swapchain
-	uint32_t swapchainImageIndex;
+	uint32_t swapchainImageIndex = 0;
 	VK_CHECK(vkResetFences(device, 1, &current_frame.acquire_fence));
 	VkResult e = vkAcquireNextImageKHR(device, swapchain, 1000000000, current_frame.swapchain_semaphore, current_frame.acquire_fence, &swapchainImageIndex);
 	if (e == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -705,7 +756,7 @@ void VulkanPlugin::draw(){
 		return;
 	}
 
-	VkExtent2D _drawExtent ;
+	VkExtent2D _drawExtent{} ;
 	_drawExtent.height = window_height ;
 	_drawExtent.width = window_width ;
 
@@ -813,7 +864,17 @@ void VulkanPlugin::draw(){
 }
 
 
+VulkanBuffer::~VulkanBuffer() {
+	buffer_lock.lock();
+	vulkan_buffers_to_destroy.emplace_back(buffer,allocation, VulkanPlugin::frame_number, now());
+	buffer_lock.unlock();
+}
 
+VulkanImage::~VulkanImage() {
+	buffer_lock.lock();
+	vulkan_images_to_destroy.emplace_back(image,imageView,allocation,VulkanPlugin::frame_number, now());
+	buffer_lock.unlock();
+}
 
 void VulkanPlugin::clear(VkCommandBuffer cmd, std::vector<std::shared_ptr<WFImage>> output_attachments, std::vector <VkClearColorValue> output_clear, std::vector<std::shared_ptr <WFImage>> depth_attachments){
 	//Clear colors
@@ -887,11 +948,13 @@ void VulkanPlugin::clear(VkCommandBuffer cmd, std::shared_ptr<VulkanBuffer> buff
 
 void VulkanPlugin::drawRenderables(VkCommandBuffer cmd){
 	std::map<int,std::unordered_map<int,std::vector<std::shared_ptr<Renderable>>>> to_draw; // key is phases and then groups
-	lock.lock();
+	lock.lock(); // lock just while iterating renderables
 	for(auto& [key, renderable] : renderables){
 		to_draw[renderable->phase][renderable->group].push_back(renderable) ;
+		renderable->updateBuffers(cmd, this);
 		//inputDisplay(renderable->input_num,5, true);
 	}
+	stampTime(cmd, "buffer updates complete");
 	lock.unlock();
 
 	for(auto& [phase, group_map] : to_draw){ // for each user-defined phase
@@ -910,8 +973,10 @@ void VulkanPlugin::drawRenderables(VkCommandBuffer cmd){
 		int calls = 0 ;
 		lock.lock();
 		auto active_render_targets = active_targets ;
-		
 		lock.unlock();
+
+		
+
 		for(auto& target : active_render_targets){ // for each render target
 			target->setViewport(cmd, this);
 			for (auto& [group, group_list] : group_map) { // for each group
@@ -948,7 +1013,7 @@ void VulkanPlugin::drawRenderables(VkCommandBuffer cmd){
 //TODO this function should be removed, it was generated by chatGPT, uses should be replaced with just the proper bits instead of "finding" them
 // Maybe deprecate the memory allocator altogether?
 uint32_t VulkanPlugin::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties){
-	VkPhysicalDeviceMemoryProperties memProperties;
+	VkPhysicalDeviceMemoryProperties memProperties{};
 	vkGetPhysicalDeviceMemoryProperties(physical_device, &memProperties);
 
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -1036,7 +1101,7 @@ VkShaderModule VulkanPlugin::loadShader(const unsigned char* shader_file_content
 	create_info.pNext = nullptr;
 	create_info.codeSize = num_bytes;
 	create_info.pCode = (uint32_t*)shader_file_contents;
-	VkShaderModule shader_module;
+	VkShaderModule shader_module = VK_NULL_HANDLE;
 	if (vkCreateShaderModule(device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to build required shader.");
 	}
@@ -1093,7 +1158,7 @@ VkDescriptorSetLayout VulkanPlugin::getDescriptorLayout(const VkDescriptorType& 
 	layout_info.bindingCount = (uint32_t)bindings.size();
 	layout_info.pBindings = bindings.data();
 
-	VkDescriptorSetLayout set_layout;
+	VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
 	vkCreateDescriptorSetLayout(device, &layout_info, nullptr, &set_layout);
 	return set_layout ;
 }
@@ -1150,7 +1215,7 @@ VkDescriptorSet VulkanPlugin::allocateBinding(const VkDescriptorSetLayout& layou
 	alloc_info.descriptorPool = pool_with_info->pool ;
 	alloc_info.descriptorSetCount = 1;
 	alloc_info.pSetLayouts = &layout;
-	VkDescriptorSet binding;
+	VkDescriptorSet binding = VK_NULL_HANDLE;
 	vkAllocateDescriptorSets(device, &alloc_info, &binding);
 	descriptor_location[binding] = {pool_with_info,layout} ;
 	pool_with_info->used_descriptors++;
@@ -1236,7 +1301,7 @@ void VulkanPlugin::logTimes(){
 			sizeof(uint64_t),
 			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
 		);
-		VkPhysicalDeviceProperties props;
+		VkPhysicalDeviceProperties props{};
 		vkGetPhysicalDeviceProperties(physical_device, &props);
 		double ns_per_tick = props.limits.timestampPeriod;
 		auto current_time = now() ;
@@ -1313,7 +1378,7 @@ TriangleShaderProgram::TriangleShaderProgram(
 	textureLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	textureLayoutInfo.bindingCount = num_textures;
 	textureLayoutInfo.pBindings = texture_bindings.data();
-	VkDescriptorSetLayout textureSetLayout;
+	VkDescriptorSetLayout textureSetLayout = VK_NULL_HANDLE;
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &textureLayoutInfo, nullptr, &textureSetLayout));
 
 	// Add descriptor set layout for textures to the pipeline info

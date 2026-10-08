@@ -29,8 +29,8 @@ public:
 		std::string id;
 		std::string name;
 		std::string description;
-		bool achieved;
-		int icon; // index in steamapi for the icon
+		bool achieved = false;
+		int icon = 0; // index in steamapi for the icon
 
 	};
 
@@ -51,7 +51,7 @@ public:
 		uint16 port = 0;
 		uint32 address = 0;
 		std::string connect  = "" ;
-		int ping;
+		int ping = 0;
 		std::map<std::string, std::string> extra_values;
 	};
 
@@ -97,7 +97,7 @@ public:
 		~SteamSocket();
 
 		PacketReceiver* packet_receiver = nullptr;
-		SteamNetworkingIdentity identity;
+		SteamNetworkingIdentity identity{};
 		std::map<int, HSteamNetConnection> connections;
 		std::map<CSteamID, int> steamIDToPlayer;
 		std::map <CSteamID, bool> authenticated ;
@@ -106,8 +106,8 @@ public:
 		
 		bool is_server = false;
 		bool is_dedicated = false;
-		HSteamListenSocket listen_socket; // Socket to listen for new connections on 
-		HSteamNetPollGroup poll_group; // Poll group used to receive messages from all clients at once
+		HSteamListenSocket listen_socket = 0U; // Socket to listen for new connections on 
+		HSteamNetPollGroup poll_group = 0U; // Poll group used to receive messages from all clients at once
 		int next_player = 1;
 	};
 
@@ -187,7 +187,7 @@ public:
 	void disconnect() ;
 
 private:
-	long steamapp_id;
+	long steamapp_id = 0;
 	std::vector<SteamAchievement> achievements;
 	bool initialized = false; 
 	bool dedicated_server = false;
@@ -204,7 +204,7 @@ private:
 	std::vector<SteamServerInfo> last_servers;
 
 	static inline std::shared_ptr<SteamSocket> steam_socket ;
-	static inline SteamServerInfo lobby_info ;
+	static SteamServerInfo lobby_info ;
 
 	static inline bool join_lobby_pending = false ;
 	static inline CSteamID pending_join_lobby_id ;
@@ -257,5 +257,8 @@ private:
 
 
 
+
+// Defined outside the class: GCC can't use SteamServerInfo's default member initializers until SteamworksPlugin is complete.
+inline SteamworksPlugin::SteamServerInfo SteamworksPlugin::lobby_info;
 
 #endif // #ifndef _STEAMWORKS_H_

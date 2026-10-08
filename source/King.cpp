@@ -5,7 +5,7 @@ namespace Chess {
 
 // Return all pieces that are first seen from the king's perspective on his file/row
 std::list<int64_t> King::rookThreats(const glm::vec3& new_p) const {
-    int64_t id;
+    int64_t id = 0;
     std::list<int64_t> ids;
 
     if (id = blockedBy(glm::vec3(new_p.x, 0, 4.5))) ids.emplace_back(id);
@@ -18,7 +18,7 @@ std::list<int64_t> King::rookThreats(const glm::vec3& new_p) const {
 
 // Return all pieces that are first seen from the king's perspective on his diagonals
 std::list<int64_t> King::bishopThreats(const glm::vec3& new_p) const {
-    int64_t id;
+    int64_t id = 0;
     std::list<int64_t> ids;
 
     if (id = blockedBy(glm::vec3(new_p.x + 8, 0, new_p.z + 8))) ids.emplace_back(id);

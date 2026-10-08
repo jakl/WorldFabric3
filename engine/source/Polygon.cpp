@@ -113,7 +113,7 @@ std::vector<glm::dvec3> Polygon::getPlaneIntersections(const std::pair<glm::dvec
     const double &d = plane.second;
     int prev_index = (int)( p.size()-1 );
     double prev_signed_distance = glm::dot(p[prev_index],N)+d ;
-    double signed_distance;
+    double signed_distance = 0.0;
     for(int k=0; k<p.size(); k++){
       signed_distance = glm::dot(p[k],N)+d ;
       if(fabs(signed_distance)<EPSILON){//if point on plane

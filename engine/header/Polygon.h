@@ -32,9 +32,9 @@ class Polygon{
         static std::pair<std::vector<Polygon>, std::vector<Polygon>> splitOnPlane(std::vector<Polygon>& surface, const std::pair<glm::dvec3, double>& plane);
 
         struct SortablePoint{
-            double x;
-            double y;
-            glm::dvec3 p ;
+            double x = 0.0;
+            double y = 0.0;
+            glm::dvec3 p{} ;
         };
 
         // A Comparator to sort points into a clean winding order 

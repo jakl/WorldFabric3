@@ -46,10 +46,10 @@ public:
 	static inline const int READY_FOR_SCENE = 56296549;//thread signal for when the scene waits to run
 
 	struct DefaultPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
 	};
 
 	class AbstractShaderSet {
@@ -74,44 +74,44 @@ public:
 	};
 
 	struct ScreenPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
 	};
 
 
 	struct TranslucentPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
-		VkDeviceAddress fragment_buffer;
-		VkDeviceAddress count_buffer;
-		int frame_width;
-		int frame_height;
-		int fragments;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
+		VkDeviceAddress fragment_buffer = 0;
+		VkDeviceAddress count_buffer = 0;
+		int frame_width = 0;
+		int frame_height = 0;
+		int fragments = 0;
 	};
 
 	struct TranslucentScreenPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
-		VkDeviceAddress fragment_buffer;
-		VkDeviceAddress count_buffer;
-		int frame_width;
-		int frame_height;
-		int fragments;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
+		VkDeviceAddress fragment_buffer = 0;
+		VkDeviceAddress count_buffer = 0;
+		int frame_width = 0;
+		int frame_height = 0;
+		int fragments = 0;
 	};
 
 
 	struct AmbientComponent {
-		glm::vec4 lightcolor;
+		glm::vec4 lightcolor{};
 	};
 
 	struct LightComponent {
-		glm::vec4 light_position;
-		glm::vec4 light_color;
-		glm::mat4 light_matrix;
+		glm::vec4 light_position{};
+		glm::vec4 light_color{};
+		glm::mat4 light_matrix{};
 	};
 
 
@@ -230,9 +230,9 @@ public:
 
 	class BoneOverride {
 	public:
-		glm::vec3 scale;
+		glm::vec3 scale{};
 		bool scale_override = false;
-		glm::quat orientation;
+		glm::quat orientation{};
 		bool orientation_override = false;
 	};
 
@@ -249,21 +249,21 @@ public:
 	public:
 		int node = -1;
 		int depth = -1; // Springs needs to be executed in depth order
-		glm::vec3 local_point; // The point in bone space this spring is controlling
-		glm::vec3 world_point; // The physically simulated point in World Space
-		glm::vec3 prev_world_point ; // We use verlet integration for stability so this implicitly holds the current velocity
-		glm::vec3 last_target ;
+		glm::vec3 local_point{}; // The point in bone space this spring is controlling
+		glm::vec3 world_point{}; // The physically simulated point in World Space
+		glm::vec3 prev_world_point{} ; // We use verlet integration for stability so this implicitly holds the current velocity
+		glm::vec3 last_target{} ;
 		bool reset = true ;
 		float half_return_time = 0.25f ; // the amoutn of time it takes a spring bone to return halfway to it's model position
 		float half_velocity_time = 0.03f ; // the amount fo time it takes aspring bone point to lsoe half of its velocity
-		glm::vec3 acceleration; //external force being applied
-		float collision_radius ;
+		glm::vec3 acceleration{}; //external force being applied
+		float collision_radius = 0.0F ;
 		std::vector<int> colliders ; // Indices into collider list of which colliders this needs to pay attention to
 	};
 
 	class Instance {
 	public:
-		glm::mat4 pose;
+		glm::mat4 pose{};
 		int transform_group = 0; // this instance also gets a group transform applied to it after its own pose
 		//glm::mat4 inv_pose;
 		std::shared_ptr<GLTF> skeleton;

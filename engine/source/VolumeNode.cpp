@@ -80,15 +80,15 @@ void VolumeNode::split(glm::dvec3 normal, double d){
 std::pair<glm::dvec3, double> VolumeNode::getDeepCuttingPlane(){
 	
 	/*
-	glm::dvec3 best_p ;
-	glm::dvec3 best_normal ;
+	glm::dvec3 best_p{} ;
+	glm::dvec3 best_normal{} ;
 	double best_score = EPSILON ;
 	std::vector<glm::dvec3> points;
 	for (auto& face : true_shape) {
 		for (auto& v : face.p) {
 			glm::dvec3 p = v ;
 			double closest_face = FLT_MAX ; 
-			glm::dvec3 closest_normal;
+			glm::dvec3 closest_normal{};
 			double score = 0 ;
 			for(auto& h : hull_planes){
 				double distance = fabs(glm::dot(h.first, p) + h.second);
@@ -122,7 +122,7 @@ std::pair<glm::dvec3, double> VolumeNode::getDeepCuttingPlane(){
 	*/
 
 
-	glm::dvec3 best_normal ;
+	glm::dvec3 best_normal{} ;
 	double best_d  = 0;
 	double best_score = FLT_MAX;
 	int tries=  10 ;

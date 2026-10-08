@@ -9,12 +9,12 @@ namespace Narball {
 
 	class HighlightParticle {
 	public:
-		glm::vec3 X, Y, Z;
+		glm::vec3 X{}, Y{}, Z{};
 		float spin_rate = 1.0f;
 		float particle_size = 1.0f;
-		double start_time, end_time;
+		double start_time = 0.0, end_time = 0.0;
 		int particle_id = -1;
-		glm::vec3 position;
+		glm::vec3 position{};
 		bool stopped = false;
 
 		HighlightParticle(double start, double end, float spin, float size, const glm::vec4& color) {

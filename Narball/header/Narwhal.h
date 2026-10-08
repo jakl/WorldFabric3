@@ -92,9 +92,9 @@ auto static getStructure(Narball::Narwhal& obj) {
 class NarwhalControlAction : public UniversalAction{
 public:
 	int player_id = -1 ; // player issuing the action
-	glm::vec2 left_stick ;
-	glm::vec2 right_stick ;
-	int input_num ; // used for tracking input latency through the whole system
+	glm::vec2 left_stick{} ;
+	glm::vec2 right_stick{} ;
+	int input_num = 0 ; // used for tracking input latency through the whole system
 
 
 	NarwhalControlAction(int pid, glm::vec2 l, glm::vec2 r, int n) : player_id(pid),left_stick(l), right_stick(r), input_num(n){};
@@ -103,7 +103,7 @@ public:
 class NarwhalView : public ObjectView<Narwhal>, public virtual ActionReceiver<NarwhalControlAction> {
 public:
 
-	int64_t id;
+	int64_t id = 0LL;
 	int scene_id = -1;
 	int last_sound = -1;
 	int last_sound_number = -1;
@@ -112,7 +112,7 @@ public:
 	std::chrono::high_resolution_clock::time_point last_sound_time = now();
 	std::chrono::high_resolution_clock::time_point last_view_time = now();
 	Narwhal last_view;
-	double last_age;
+	double last_age = 0.0;
 
 
 	int num_highlight = 0; // Most narwhals have no particles, but the game can fetch the local one and turn this up

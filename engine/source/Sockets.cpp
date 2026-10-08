@@ -40,7 +40,7 @@ bool UDPServerSocket::open(int port) {
 		return false;
 	}
 
-	sockaddr_in service;
+	sockaddr_in service{};
 	service.sin_family = AF_INET;
 	service.sin_addr.s_addr = INADDR_ANY;
 	service.sin_port = htons(port);

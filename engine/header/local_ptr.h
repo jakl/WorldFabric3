@@ -6,7 +6,7 @@
 
 struct UntypedContent {
 	std::vector<char> data;
-	int references ; // untyped data may not have a reference when created as it is the sum of typed references
+	int references = 0 ; // untyped data may not have a reference when created as it is the sum of typed references
 	UntypedContent(std::vector<char> b, int r = 0) : data(std::move(b)), references(r) {} // steal the vector's internal pointer to avoid a copy
 };
 
@@ -14,7 +14,7 @@ struct UntypedContent {
 template <typename T>
 struct TypedContent  {
 	const T data;
-	int references ; // Typed data should have at least one rerence when created
+	int references = 0 ; // Typed data should have at least one rerence when created
 	// Copy data when putting it into the content storage
 	TypedContent(const T& value, int r = 1) : data(value), references(r) {} // a copy
 };

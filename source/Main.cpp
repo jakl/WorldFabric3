@@ -176,7 +176,7 @@ ScenePlugin* setUpScene(VulkanPlugin* window, OpenXRPlugin* xr){
 
 	scene->setLightProgram(light_shader);
 	vkDestroyShaderModule(window->device, light_shader, nullptr);
-	ScenePlugin::LightComponent lc ;
+	ScenePlugin::LightComponent lc{} ;
 	
 	
 	lc.light_color = glm::vec4(0.01, 0.01, 0.01, 1);

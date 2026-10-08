@@ -423,7 +423,7 @@ public:
 		float history_kept = -1.0f;
 		double last_vantage_time = -1.0f;
 		std::string version ;
-		glm::vec3 last_vantage;
+		glm::vec3 last_vantage{};
 
 		std::vector<std::vector<char>> objects ;
 		std::vector<std::pair<char, std::vector<char>>> pending_events ;
@@ -453,7 +453,7 @@ public:
 		//Sends of hash of objects at a specific time for checking sync failure
 		double hash_time = 1.0 ;
 		int64_t object_hash = -1 ;
-		double last_run_time;
+		double last_run_time = 0.0;
 		// events that were externally queued and need to be injected
 		std::vector<std::pair<char, std::vector<char>>> external_events;
 

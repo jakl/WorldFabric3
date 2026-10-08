@@ -192,7 +192,7 @@ glm::mat3 ConvexShape::computeTetraInertia(const float mass, const vec3& A, cons
     double bp = mu*(2*x1*z1 + x2*z1 + x3*z1 + x4*z1 + x1*z2 + 2*x2*z2 + x3*z2 + x4*z2 + x1*z3 + x2*z3 + 2*x3*z3 + x4*z3 + x1*z4 + x2*z4 + x3*z4 + 2*x4*z4)/120.0 ;
     double cp = mu*(2*x1*y1 + x2*y1 + x3*y1 + x4*y1 + x1*y2 + 2*x2*y2 + x3*y2 + x4*y2 + x1*y3 + x2*y3 + 2*x3*y3 + x4*y3 + x1*y4 + x2*y4 + x3*y4 + 2*x4*y4)/120.0 ;
 
-    glm::mat3 J;
+    glm::mat3 J{};
     J[0][0] = (float)a;
     J[0][1] = (float)-bp;
     J[0][2] = (float)-cp;

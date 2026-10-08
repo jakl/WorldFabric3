@@ -91,7 +91,7 @@ private:
 	std::chrono::high_resolution_clock::time_point last_run_time;
 	std::chrono::high_resolution_clock::time_point current_time;
 
-	int beach_id;
+	int beach_id = 0;
 
 	
 

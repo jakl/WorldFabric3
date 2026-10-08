@@ -25,7 +25,7 @@ public:
 
 private:
 
-	glm::vec3 position;
+	glm::vec3 position{};
 	glm::vec3 text_color = glm::vec3(0, 0, 0);
 	glm::vec3 text_border_color = glm::vec3(1, 1, 1);
 	int player = -1;

@@ -108,7 +108,7 @@ void BallThrowApp::enter(std::shared_ptr<MachineState> from) {
 */
 
 	// Make a nice ring light so it's extra smooth
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	lc.light_color = glm::vec4(0.05, 0.05, 0.05 -20.0, 1);
 	
 	glm::vec3 look_at = glm::vec3(0, 0, 0);

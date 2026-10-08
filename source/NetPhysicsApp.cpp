@@ -15,7 +15,7 @@ void NetPhysicsApp::enter(std::shared_ptr<MachineState> from) {
 	NetPhysics::registerPhysics();
 
 	// Set up a light for the scene
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	glm::vec3 light_position = glm::vec3(15, 0.5, -0.5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(0.5, 0.5, 0.5, 1);
@@ -291,7 +291,7 @@ void NetPhysicsApp::host(){
 		//chain_pos += off;
 	}
 
-	int64_t body_id ;
+	int64_t body_id  = 0;
 	// Add the container blocks
 	float wall_size = 30.0f; // TODO share between type creation
 	body_id = worlds->create(WORLD, std::make_shared<NetPhysics::RigidBody>(wall_type, glm::vec3(mid.x, min.y - wall_size * 0.5f, mid.z)));

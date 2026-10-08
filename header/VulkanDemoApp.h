@@ -25,22 +25,22 @@ public:
 
 
 	struct MeshPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
 	};
 
 	struct ComputePushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
-		float test_value;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
+		float test_value = 0.0F;
 	};
 
 
 	struct ComputeComponent {
-		glm::vec4 some_data;
+		glm::vec4 some_data{};
 	};
 
 
@@ -63,7 +63,7 @@ public:
 	static std::pair<std::vector<std::shared_ptr<TriangleModel<VulkanDemoApp::MeshPushConstants, GLTF::BufferVertex, GLTF::Instance256>>>, std::shared_ptr<GLTF>> loadGLTF(std::string file_path, VulkanPlugin* renderer, std::shared_ptr<TriangleShaderProgram> mesh_program);
 
 private:
-	glm::mat4 camera_matrix ;
+	glm::mat4 camera_matrix{} ;
 	
 
 	std::shared_ptr<TriangleShaderProgram> mesh_program;
@@ -74,9 +74,9 @@ private:
 
 
 
-	int fox_id ;
-	int dragon_id ;
-	int post_effect_id ;
+	int fox_id = 0 ;
+	int dragon_id = 0 ;
+	int post_effect_id = 0 ;
 
 	
 

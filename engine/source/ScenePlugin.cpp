@@ -1,4 +1,5 @@
 #include "ScenePlugin.h"
+
 #include "Polygon.h"
 
 
@@ -333,7 +334,7 @@ void ScenePlugin::run() {
 
 	OpenXRPlugin* xr = getTool<OpenXRPlugin>();
 
-	glm::vec3 view_position ;
+	glm::vec3 view_position{} ;
 	if (OpenXRPlugin::ENABLED) {
 		view_position = (xr->left_eye_target->camera_position + xr->right_eye_target->camera_position) * 0.5f;
 	}else {
@@ -942,7 +943,7 @@ std::pair<bool,glm::vec3> ScenePlugin::resolveCollision(const Capsule& A,const C
 	float d = glm::dot(u, w);
 	float e = glm::dot(v, w);
 	float denom = a * c - b * b;
-	float s, t;
+	float s = 0.0F, t = 0.0F;
 
 	//printf("A:%f, B%f, c:%f, d:%f, e:%f, denom: %f\n", a,b,c,d,e,denom) ;
 

@@ -219,7 +219,7 @@ void NarballMenu::run() {
 			printf("Connect: %s\n", servers[best_index].connect.c_str());
 			waiting_on_join = true;
 			join_start = now();
-			SteamNetworkingIPAddr addr ;
+			SteamNetworkingIPAddr addr{} ;
 			addr.ParseString(servers[best_index].connect.c_str()) ;
 			steam->joinAddress(addr) ;
 		}

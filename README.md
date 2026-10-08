@@ -38,7 +38,15 @@ The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disa
 - Calls returning integers, enums, `bool` or pointers, or filling output parameters, are safe with either compiler.
 
 ### Cleanup candidates
-- **Other uninitialized members.** All Vulkan/VMA handle members in `VulkanPlugin.h` and `vk_types.h` now default to `VK_NULL_HANDLE`/`nullptr` (an uninitialized draw-indirect buffer handle crashed GCC builds). Non-handle members such as `VulkanBuffer::device_address`, `VkFormat`/`VkExtent` fields and many plain `int`s in the engine still have no initializer.
+- **Keep variables initialized.** All members and locals in the project's own code (everything outside `include/`, `vk_mem_alloc.h` and VkBootstrap) now have initializers; this exposed an uninitialized draw-indirect buffer handle that crashed GCC builds and a `Board` constructor that initialized its position from itself. To check new code, run (from an MSYS2 UCRT64 shell, after configuring `gcc-release`; needs `mingw-w64-ucrt-x86_64-clang-tools-extra`):
+  ```
+  run-clang-tidy -p build/gcc-release -quiet \
+    -checks='-*,cppcoreguidelines-init-variables,cppcoreguidelines-pro-type-member-init' \
+    -header-filter='.*/(engine/header|header|Narball/header)/.*' -exclude-header-filter='.*(vk_mem_alloc|VkBootstrap).*' \
+    '^(?!.*(VkBootstrap|/include/)).*\.cpp$'
+  ```
+  A GCC build with `-Wuninitialized -Wmaybe-uninitialized` at `-O2` also catches reads of uninitialized values.
+- **Missing return.** `Polynomial::operator[](const ComplexNumber&)` in `engine/header/Utilities.h` calls `apply(x)` but never returns a value (undefined behavior if called; GCC warns with `-Wreturn-type`). It should probably be `return apply(x);`.
 - **Indirect-buffer lifetime.** `TriangleModel::render` destroys the previous indirect draw buffer one update later, "in case it's in use". That doesn't guarantee the GPU has finished with it. Tie destruction to a frame fence instead.
 - **Unused libraries.** `CMakeLists.txt` links every `.lib` the old project did, but the exe only imports `SDL3`, `SDL3_ttf`, `OpenAL32`, `openvr_api`, `steam_api64` and `vulkan-1`. `glew32`, `OpenGL32`, `SDL3_image/mixer/net/rtf`, `SDL3_test`, `glew32s` and `sdkencryptedappticket64` could likely be dropped.
 - **Unused DLLs.** All of `dll/` is copied next to the exe. `SDL2.dll`, `freeglut.dll`, `glfw3.dll`, `glew32.dll`, `steam_api.dll` (32-bit) and the SDL3 extension DLLs aren't imported. `ucrtbase.dll` shouldn't be redistributed this way; it ships with Windows.

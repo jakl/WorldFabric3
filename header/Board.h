@@ -46,7 +46,7 @@ namespace Chess {
 		})> board_of_pieces;
 
 		Board(const glm::vec3& p, const std::string& model_name_set)
-			: WorldObject(position), model_name(model_name_set) {};
+			: WorldObject(p), model_name(model_name_set) {};
 		void init();
 
 		void destroy();
@@ -90,7 +90,7 @@ namespace Chess {
 		int scene_id = -1;
 		int trigger_id = -1;
 		int particle_id = -1 ;
-		glm::mat4 pose;
+		glm::mat4 pose{};
 		
 
 		//created is called when an objectis observed that ws no observed last time view was called on the world

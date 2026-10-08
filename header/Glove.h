@@ -50,7 +50,7 @@ namespace Chess {
 	public:
 		int64_t id = -1;
 		int scene_id = -1;
-		glm::mat4 pose;
+		glm::mat4 pose{};
 
 		//created is called when an objectis observed that ws no observed last time view was called on the world
 		void created(std::shared_ptr<const Glove>& observation) override;

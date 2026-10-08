@@ -53,10 +53,10 @@ class VulkanImage {
 		VkImage image = 0;
 		VkImageView imageView = 0;
 		VmaAllocation allocation = 0;
-		VkExtent3D imageExtent ;
-		VkFormat imageFormat ;
+		VkExtent3D imageExtent{} ;
+		VkFormat imageFormat = VK_FORMAT_UNDEFINED;
 		VkImageUsageFlags usages = 0 ;
-		VkImageLayout current_layout ;
+		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		bool depth = false;
 
 		static inline std::mutex buffer_lock;
@@ -70,8 +70,8 @@ class VulkanBuffer {
 	public:
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
-		VmaAllocationInfo info;
-		VkDeviceAddress device_address; // can be used as apointer in shaders, will be set only if the buffer is flagged for shader use
+		VmaAllocationInfo info{};
+		VkDeviceAddress device_address = 0ULL; // can be used as apointer in shaders, will be set only if the buffer is flagged for shader use
 		uint32_t object_count = 0;// will be set when pushing structs with pushBufferData
 
 		static inline std::mutex buffer_lock ;
@@ -102,12 +102,12 @@ public:
 
 private:
 	std::shared_ptr<VulkanImage> vulkan_image = nullptr; //will only be manipulated on the Vulkan thread
-	uint32_t width;
-	uint32_t height;
+	uint32_t width = 0;
+	uint32_t height = 0;
 
 	bool needs_created = false;
-	VkFormat format;
-	VkImageUsageFlags usages;
+	VkFormat format = VK_FORMAT_UNDEFINED;
+	VkImageUsageFlags usages = 0;
 
 	bool needs_data_push = false;
 	Variant pending_data;
@@ -161,7 +161,7 @@ class TriangleShaderProgram{
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 		VkPipeline pipeline = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
-		int num_color_attachments ; // triangle shaders don't have to attach all rrender target images
+		int num_color_attachments = 0 ; // triangle shaders don't have to attach all rrender target images
 };
 
 // A compute shader program which runs on a set of images
@@ -201,9 +201,9 @@ private:
 	VkPipeline pipeline = VK_NULL_HANDLE;
 	VkDevice device = VK_NULL_HANDLE;
 	VkDescriptorSetLayout descriptor_layout = VK_NULL_HANDLE;
-	int local_size ; 
-	int image_width ;
-	int image_height ;
+	int local_size = 0 ; 
+	int image_width = 0 ;
+	int image_height = 0 ;
 };
 
 
@@ -315,7 +315,7 @@ public:
 	VmaAllocator VMA_allocator = nullptr;
 
 	VkQueue vulkan_queue = VK_NULL_HANDLE;
-	uint32_t vulkan_queue_family;
+	uint32_t vulkan_queue_family = 0U;
 
 	//TODO make private?
 	std::vector< std::shared_ptr<WFImage>> extra_images_to_clear ; // images besides render targets to be cleared at the begining of each frame
@@ -507,7 +507,7 @@ public:
 		}
 		std::shared_ptr <VulkanBuffer> staging = createVulkanBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 			
-		void* staging_data;
+		void* staging_data = nullptr;
 		vmaMapMemory(VMA_allocator, staging->allocation, &staging_data);
 
 		memcpy(staging_data, input_data.data(), buffer_size);// copy vertex buffer into staging
@@ -556,9 +556,9 @@ private:
 	std::pair<int, int> last_gamepad_button = {-1,-1} ;
 
 	int last_key = -1;
-	glm::vec2 mouse_position ;
-	glm::vec2 mouse_down_position;
-	glm::vec2 mouse_wheel_position;
+	glm::vec2 mouse_position{} ;
+	glm::vec2 mouse_down_position{};
+	glm::vec2 mouse_wheel_position{};
 	std::map<int, bool> mouse_down ;
 	bool mouse_hidden = false;
 	bool last_mouse_hidden = false; 
@@ -567,8 +567,8 @@ private:
 	
 	VkSurfaceKHR SDL_vulkan_surface = VK_NULL_HANDLE;
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-	VkFormat swapchainImageFormat;
-	VkExtent2D swapchainExtent;
+	VkFormat swapchainImageFormat = VK_FORMAT_UNDEFINED;
+	VkExtent2D swapchainExtent{};
 	vkb::Swapchain vkbSwapchain ;
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> swapchainImages;
@@ -584,8 +584,8 @@ private:
 		VkDescriptorPool pool = VK_NULL_HANDLE;
 		int image_count= -1 ; // number of images in binding also pool_sizes size
 		int used_descriptors = 0 ;
-		VkDescriptorType type;
-		VkShaderStageFlags stage_flags ;
+		VkDescriptorType type{};
+		VkShaderStageFlags stage_flags = 0U ;
 	};
 	std::unordered_map<std::pair<VkDescriptorType,VkShaderStageFlags>,std::unordered_map<int, std::vector<std::shared_ptr<PoolWithInfo>>>> descriptor_pools ;//First index is number of images, so each pool only contains descriptors of the same size
 	std::unordered_map < VkDescriptorSet, std::pair<std::shared_ptr<PoolWithInfo>, VkDescriptorSetLayout>> descriptor_location; // remember which pools we allocate to and our layout for easy cleanup
@@ -637,8 +637,8 @@ private:
 
 class RenderTarget {
 public:
-	glm::mat4 camera_matrix;
-	glm::vec3 camera_position ;
+	glm::mat4 camera_matrix{};
+	glm::vec3 camera_position{} ;
 	int width = 0; // dimensions of images
 	int height = 0;
 	float near = -1;
@@ -1074,7 +1074,7 @@ public:
 			vkCreateBuffer(renderer->device, &bufferInfo, nullptr, &draw_indirect_buffer);
 
 			// Step 2: Allocate and bind memory
-			VkMemoryRequirements memReq;
+			VkMemoryRequirements memReq{};
 			vkGetBufferMemoryRequirements(renderer->device, draw_indirect_buffer, &memReq);
 
 			VkMemoryAllocateInfo allocInfo{};
@@ -1090,7 +1090,7 @@ public:
 			vkBindBufferMemory(renderer->device, draw_indirect_buffer, draw_indirect_buffer_memory, 0);
 
 
-			void* data;
+			void* data = nullptr;
 			vkMapMemory(renderer->device, draw_indirect_buffer_memory, 0, sizeof(drawCmd), 0, &data);
 			memcpy(data, &drawCmd, sizeof(drawCmd));
 			vkUnmapMemory(renderer->device, draw_indirect_buffer_memory);

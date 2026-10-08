@@ -25,7 +25,7 @@ void TraceApp::enter(std::shared_ptr<MachineState> from) {
 	particles->setPose(mouse_particle_id, particle_pose);
 
 	// Set up a light for the scene
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	glm::vec3 light_position = glm::vec3(2, 2, -5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(1, 1, 1, 1);
@@ -69,7 +69,7 @@ void TraceApp::run() {
 	float t = model->rayTrace(ray_origin, ray_direction);
 	float bt = model->rayTraceBoundingBox(ray_origin, ray_direction);
 	//Place the mouse particle
-	glm::vec3 mouse_position;
+	glm::vec3 mouse_position{};
 	if (t > 0) { // collision
 		particles->setColor(mouse_particle_id, glm::vec4(0, 0, 1, 1)); // blue
 		mouse_position = window->window_target->camera_position + window->getMouseRay() * t; // hit postion

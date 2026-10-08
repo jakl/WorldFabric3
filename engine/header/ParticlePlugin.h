@@ -21,19 +21,19 @@
 
 
 struct alignas(16) ParticleVertex{
-	alignas(16) glm::vec3 position ;
+	alignas(16) glm::vec3 position{} ;
 };
 
 struct alignas(16) ParticleInstance{
-	alignas(16) glm::mat4 pose; // pose of the particle ellipse
-	alignas(16) glm::vec4 color;
+	alignas(16) glm::mat4 pose{}; // pose of the particle ellipse
+	alignas(16) glm::vec4 color{};
 };
 
 struct alignas(16) ParticlePushConstants {
-	alignas(16) glm::mat4 world_matrix;
-	alignas(16) glm::vec3 camera_position;
-	VkDeviceAddress vertexBuffer;
-	VkDeviceAddress instanceBuffer;
+	alignas(16) glm::mat4 world_matrix{};
+	alignas(16) glm::vec3 camera_position{};
+	VkDeviceAddress vertexBuffer = 0;
+	VkDeviceAddress instanceBuffer = 0;
 };
 
 class ParticlePlugin : public AsyncPlugin {
@@ -82,7 +82,7 @@ public:
 private:
 	std::shared_ptr<TriangleShaderProgram> particle_program; // shader progra mfor particles
 	std::shared_ptr<TriangleModel<ParticlePushConstants, ParticleVertex, ParticleInstance>> particle_model;
-	int model_id ;
+	int model_id = 0 ;
 	std::unordered_map <int, ParticleInstance> particles;
 	std::unordered_map<int, int> particle_groups;
 	int max_visible = 0 ; // maximum number of particles visible at a time (closest shown first)

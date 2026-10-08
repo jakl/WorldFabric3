@@ -648,7 +648,7 @@ void MirrorApp::recenter(ScenePlugin* scene, glm::mat4& current_head_pose) {
 
 
 
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	lc.light_color = glm::vec4(.06, .06, .06, 1);
 
 	glm::vec3 light_offset = glm::vec3(-1, 3, 0) ;

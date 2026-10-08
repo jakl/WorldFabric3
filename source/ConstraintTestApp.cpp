@@ -12,7 +12,7 @@ void ConstraintTestApp::enter(std::shared_ptr<MachineState> from) {
 	ParticlePlugin* particles = getTool<ParticlePlugin>();
 
 	// Set up a light for the scene
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	glm::vec3 light_position = glm::vec3(15, 0.5, -0.5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(0.5, 0.5, 0.5, 1);
@@ -126,7 +126,7 @@ void ConstraintTestApp::enter(std::shared_ptr<MachineState> from) {
 	float chain_angle = 0 ;
 	float y_step = chain_scale ;
 	float angle_step = 1.5f;
-	int64_t link ;
+	int64_t link  = 0;
 	for(int k=0;k<15;k++){
 		link = cell->add(chain_type,chain_pos) ;
 		cell->getBody(link)->orientation = glm::quat_cast(glm::rotate(glm::mat4(1.0f),chain_angle,glm::vec3(0,1,0))) ;

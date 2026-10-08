@@ -20,10 +20,10 @@ public:
 class ActionTrigger {
 public:
 	int context = 0;
-	glm::vec3 min;
-	glm::vec3 max;
+	glm::vec3 min{};
+	glm::vec3 max{};
 	int id = -1;
-	BaseActionReceiver* action_receiver;
+	BaseActionReceiver* action_receiver = nullptr;
 
 	ActionTrigger() {}
 
@@ -158,8 +158,8 @@ public:
 //Useful primarily for mouse clicks and hovers, but could be useful for hit-scan weapons or other types of pointers
 class RayAction : public Action {
 public:
-	glm::vec3 origin;
-	glm::vec3 direction;
+	glm::vec3 origin{};
+	glm::vec3 direction{};
 	std::priority_queue<
 		std::pair<float, std::shared_ptr<ActionTrigger>>,
 		std::vector<std::pair<float, std::shared_ptr<ActionTrigger>>>,
@@ -188,8 +188,8 @@ public:
 //Useful primarily for mouse clicks and hovers, but could be useful for hit-scan weapons or other types of pointers
 class BoxAction : public Action {
 public:
-	glm::vec3 min;
-	glm::vec3 max;
+	glm::vec3 min{};
+	glm::vec3 max{};
 	std::priority_queue<
 		std::pair<float, std::shared_ptr<ActionTrigger>>,
 		std::vector<std::pair<float, std::shared_ptr<ActionTrigger>>>,
@@ -225,7 +225,7 @@ public:
 	int hits = 0 ;
 	std::string world ;
 
-	ActionTrigger* active_item; // Reciever should set this when it is held to be notified on actions in case it no longer intersects
+	ActionTrigger* active_item = nullptr; // Reciever should set this when it is held to be notified on actions in case it no longer intersects
 	static inline int RELEASED = 1 ;
 	static inline int CLICKED = 2;
 	static inline int UPDATED = 3 ;

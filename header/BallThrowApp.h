@@ -47,8 +47,8 @@ public:
 		int head_idle_anim = -1;
 		int action_anim = -1 ;
 		int state = IDLE;
-		glm::quat base_rotation ;
-		glm::quat target_rotation  ;
+		glm::quat base_rotation{} ;
+		glm::quat target_rotation{}  ;
 		glm::mat4 pose = glm::mat4(1.0f);
 		float catch_speed = 1.0f;
 		float throw_speed = 1.0f;
@@ -345,10 +345,10 @@ public:
 
 	class ParticleSequence{
 	public:
-		float t1 ;
-		float t2 ;
-		glm::vec3 p1 ;
-		glm::vec3 p2;
+		float t1 = 0.0F ;
+		float t2 = 0.0F ;
+		glm::vec3 p1{} ;
+		glm::vec3 p2{};
 		int id = -1 ;
 		static inline float particle_size = 0.2f ;
 
@@ -406,7 +406,7 @@ public:
 private:
 
 
-	ParticlePlugin* particles ;
+	ParticlePlugin* particles = nullptr ;
 	std::chrono::high_resolution_clock::time_point last_run_time;
 	std::chrono::high_resolution_clock::time_point current_time;
 
@@ -419,8 +419,8 @@ private:
 	int catch_state_1 = 0 ;
 
 	int ball_id =-1;
-	glm::quat base_rotation;
-	glm::quat target_rot;
+	glm::quat base_rotation{};
+	glm::quat target_rot{};
 
 
 	std::vector<int> moving_lights;

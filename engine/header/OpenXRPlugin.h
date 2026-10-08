@@ -30,14 +30,14 @@
 //---------------------------------------------------------------------------------------------------------------------
 inline bool GetDigitalActionRisingEdge(vr::VRActionHandle_t action, vr::VRInputValueHandle_t* pDevicePath = nullptr)
 {
-	vr::InputDigitalActionData_t actionData;
+	vr::InputDigitalActionData_t actionData{};
 	vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
 	if (pDevicePath)
 	{
 		*pDevicePath = vr::k_ulInvalidInputValueHandle;
 		if (actionData.bActive)
 		{
-			vr::InputOriginInfo_t originInfo;
+			vr::InputOriginInfo_t originInfo{};
 			if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
 			{
 				*pDevicePath = originInfo.devicePath;
@@ -53,14 +53,14 @@ inline bool GetDigitalActionRisingEdge(vr::VRActionHandle_t action, vr::VRInputV
 //---------------------------------------------------------------------------------------------------------------------
 inline bool GetDigitalActionFallingEdge(vr::VRActionHandle_t action, vr::VRInputValueHandle_t* pDevicePath = nullptr)
 {
-	vr::InputDigitalActionData_t actionData;
+	vr::InputDigitalActionData_t actionData{};
 	vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
 	if (pDevicePath)
 	{
 		*pDevicePath = vr::k_ulInvalidInputValueHandle;
 		if (actionData.bActive)
 		{
-			vr::InputOriginInfo_t originInfo;
+			vr::InputOriginInfo_t originInfo{};
 			if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
 			{
 				*pDevicePath = originInfo.devicePath;
@@ -76,14 +76,14 @@ inline bool GetDigitalActionFallingEdge(vr::VRActionHandle_t action, vr::VRInput
 //---------------------------------------------------------------------------------------------------------------------
 inline bool GetDigitalActionState(vr::VRActionHandle_t action, vr::VRInputValueHandle_t* pDevicePath = nullptr)
 {
-	vr::InputDigitalActionData_t actionData;
+	vr::InputDigitalActionData_t actionData{};
 	vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
 	if (pDevicePath)
 	{
 		*pDevicePath = vr::k_ulInvalidInputValueHandle;
 		if (actionData.bActive)
 		{
-			vr::InputOriginInfo_t originInfo;
+			vr::InputOriginInfo_t originInfo{};
 			if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
 			{
 				*pDevicePath = originInfo.devicePath;
@@ -125,9 +125,9 @@ public:
 	class SkeletonBone {
 	public:
 		std::string name;
-		int parent;
-		glm::vec3 position;
-		glm::quat orientation;
+		int parent = 0;
+		glm::vec3 position{};
+		glm::quat orientation{};
 	};
 
 	// Boots SteamVR and sets up openGL and links to controllers and other hardware
@@ -190,8 +190,8 @@ private:
 	vr::IVRSystem* m_pHMD;
 	std::string m_strDriver;
 	std::string m_strDisplay;
-	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
-	glm::mat4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount];
+	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount]{};
+	glm::mat4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount]{};
 
 	
 	vr::VRActionSetHandle_t action_set = vr::k_ulInvalidActionSetHandle;
@@ -239,7 +239,7 @@ private:
 		vr::VRInputValueHandle_t m_source = vr::k_ulInvalidInputValueHandle;
 		vr::VRActionHandle_t m_actionPose = vr::k_ulInvalidActionHandle;
 		vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
-		glm::mat4 m_rmat4Pose;
+		glm::mat4 m_rmat4Pose{};
 		bool m_bShowController = false;
 	};
 
@@ -258,32 +258,32 @@ private:
 	
 
 	// OpenGL bookkeeping
-	int m_iTrackedControllerCount;
-	int m_iTrackedControllerCount_Last;
-	int m_iValidPoseCount;
-	int m_iValidPoseCount_Last;
-	bool m_bShowCubes;
-	glm::vec2 m_vAnalogValue;
+	int m_iTrackedControllerCount = 0;
+	int m_iTrackedControllerCount_Last = 0;
+	int m_iValidPoseCount = 0;
+	int m_iValidPoseCount_Last = 0;
+	bool m_bShowCubes = false;
+	glm::vec2 m_vAnalogValue{};
 
 	std::string m_strPoseClasses;                            // what classes we saw poses for this frame
-	char m_rDevClassChar[vr::k_unMaxTrackedDeviceCount];   // for each device, a character representing its class
+	char m_rDevClassChar[vr::k_unMaxTrackedDeviceCount]{};   // for each device, a character representing its class
 
 	float near_clip = 0.15f;
 	float far_clip = 1000.0f;
 
-	glm::mat4 m_mat4ProjectionLeft;
+	glm::mat4 m_mat4ProjectionLeft{};
 
 	glm::mat4 head_pose = glm::mat4(1.0f);
-	glm::mat4 inverse_head_pose;
-	glm::mat4 m_mat4eyePosLeft;
-	glm::mat4 m_mat4eyePosRight;
+	glm::mat4 inverse_head_pose{};
+	glm::mat4 m_mat4eyePosLeft{};
+	glm::mat4 m_mat4eyePosRight{};
 
-	glm::mat4 m_mat4ProjectionCenter;
-	glm::mat4 m_mat4ProjectionRight;
+	glm::mat4 m_mat4ProjectionCenter{};
+	glm::mat4 m_mat4ProjectionRight{};
 
 
-	uint32_t m_nRenderWidth;
-	uint32_t m_nRenderHeight;
+	uint32_t m_nRenderWidth = 0U;
+	uint32_t m_nRenderHeight = 0U;
 
 		
 

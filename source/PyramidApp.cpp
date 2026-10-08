@@ -19,7 +19,7 @@ void PyramidApp::enter(std::shared_ptr<MachineState> from) {
 	particles->setPose(mouse_particle_id, particle_pose);
 
 	// Set up a light for the scene
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	glm::vec3 light_position = glm::vec3(15, 0.5, -0.5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(0.5, 0.5, 0.5, 1);
@@ -93,7 +93,7 @@ void PyramidApp::enter(std::shared_ptr<MachineState> from) {
 	int width = max_height- height ;
 		for(int x = 0; x < width; x++){
 		for (int z = 0; z < width; z++) {
-			glm::vec3 pos ;
+			glm::vec3 pos{} ;
 			pos.y =  height * box_size*1.01f + min.y + box_size*0.5f ;
 			pos.x = (x+ 0.5f - width*0.5f) * box_size*1.01f ;
 			pos.z = (z + 0.5f - width * 0.5f) * box_size*1.01f;
@@ -125,7 +125,7 @@ void PyramidApp::run() {
 
 	float t = -1; // TODO implement raytracing to make balls clickable
 	//Place the mouse particle
-	glm::vec3 mouse_position;
+	glm::vec3 mouse_position{};
 	if (t > 0) { // collision
 		particles->setColor(mouse_particle_id, glm::vec4(0, 0, 1, 1)); // blue
 		mouse_position = window->window_target->camera_position + window->getMouseRay() * t; // hit postion

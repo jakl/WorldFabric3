@@ -16,14 +16,14 @@ class ConvexSolid {
         int status = 0 ;// for debug render 0 = no collison, 1 = sphere collision, 2 = full collision
 
         std::shared_ptr<ConvexShape> shape;
-        glm::vec3 position;
-        glm::vec3 velocity;
-        glm::quat orientation;
-        glm::vec3 angular_velocity;
-        float mass;
+        glm::vec3 position{};
+        glm::vec3 velocity{};
+        glm::quat orientation{};
+        glm::vec3 angular_velocity{};
+        float mass = 0.0F;
 
-        glm::mat3 inertia ;
-        glm::mat3 inverse_inertia ;
+        glm::mat3 inertia{} ;
+        glm::mat3 inverse_inertia{} ;
 
         ConvexSolid();
 

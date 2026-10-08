@@ -78,13 +78,13 @@ void OpenXRPlugin::run() {
 
 	if (left_eye_target) { //eye targets are set-up externally so it's possible this gets called before that happens
 		VulkanPlugin* renderer = getTool<VulkanPlugin>();
-		vr::VRTextureBounds_t bounds;
+		vr::VRTextureBounds_t bounds{};
 		bounds.uMin = 0.0f;
 		bounds.uMax = 1.0f;
 		bounds.vMin = 0.0f;
 		bounds.vMax = 1.0f;
 
-		vr::VRVulkanTextureData_t vulkanData;
+		vr::VRVulkanTextureData_t vulkanData{};
 
 		vulkanData.m_pDevice = renderer->device;
 		vulkanData.m_pPhysicalDevice = renderer->physical_device;
@@ -146,7 +146,7 @@ void OpenXRPlugin::run() {
 		}*/
 	}
 
-	vr::InputAnalogActionData_t analog_data;
+	vr::InputAnalogActionData_t analog_data{};
 	for (auto& [key, value] : vector_actions) {
 		if (vr::VRInput()->GetAnalogActionData(value, &analog_data, sizeof(analog_data), vr::k_ulInvalidInputValueHandle) == vr::VRInputError_None && analog_data.bActive) {
 			vector_values[key].x = analog_data.x;
@@ -159,7 +159,7 @@ void OpenXRPlugin::run() {
 		}
 	}
 
-	vr::InputPoseActionData_t pose;
+	vr::InputPoseActionData_t pose{};
 	for (auto& [key, value] : pose_actions) {
 		if (vr::VRInput()->GetPoseActionDataRelativeToNow(value, vr::TrackingUniverseStanding, 0.0f, &pose, sizeof(pose), vr::k_ulInvalidInputValueHandle) == vr::VRInputError_None
 			&& pose.bActive && pose.pose.bPoseIsValid) {
@@ -167,7 +167,7 @@ void OpenXRPlugin::run() {
 		}
 	}
 
-	vr::InputSkeletalActionData_t skeleton;
+	vr::InputSkeletalActionData_t skeleton{};
 	for (auto& [key, value] : skeleton_actions) {
 		//printf("%s skeleton action exists\n", key.c_str());
 		if (vr::VRInput()->GetSkeletalActionData(value, &skeleton, sizeof(skeleton)) == vr::VRInputError_None
@@ -239,7 +239,7 @@ bool OpenXRPlugin::BInit() {
 
 	if (eError != vr::VRInitError_None) {
 		m_pHMD = NULL;
-		char buf[1024];
+		char buf[1024]{};
 		sprintf_s(buf, sizeof(buf), "Unable to init VR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VR_Init Failed", buf, NULL);
 		return false;

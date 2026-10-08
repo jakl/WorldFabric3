@@ -73,7 +73,7 @@ void SceneDemoApp2::enter(std::shared_ptr<MachineState> from) {
 
 		float t = 0 ;
 
-		ScenePlugin::LightComponent lc;
+		ScenePlugin::LightComponent lc{};
 		
 		glm::vec3 pos = glm::vec3(0, 2, -5) ;
 		glm::vec3 look_at = glm::vec3(0, 0, 1);

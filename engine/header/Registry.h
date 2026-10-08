@@ -227,7 +227,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
     using RawType = std::remove_cvref_t<T>;
     if constexpr (std::is_same_v<RawType, std::string>) {
         //Deserialize string
-        size_t len;
+        size_t len = 0;
         std::memcpy(&len, data, sizeof(len));
         data += sizeof(len);
         std::string result(data, len);
@@ -243,7 +243,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
     }
     else if constexpr (is_vector_v<RawType>) {
 		// Deserialize vector
-        size_t size;
+        size_t size = 0;
         std::memcpy(&size, data, sizeof(size));
         data += sizeof(size);
         RawType result;
@@ -254,7 +254,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
         return result;
     }else if constexpr (is_any_set_v<RawType>) {
 		// Deserialize set or unordered_set
-		size_t size;
+		size_t size = 0;
 		std::memcpy(&size, data, sizeof(size));
 		data += sizeof(size);
 		RawType result;
@@ -270,7 +270,7 @@ inline std::remove_cvref_t<T> deserializeArg(const char*& data) {
 		return result;
 	}else if constexpr (is_any_map_v<RawType>) {
 		// Deserialize map or unordered_map
-		size_t size;
+		size_t size = 0;
 		std::memcpy(&size, data, sizeof(size));
 		data += sizeof(size);
 		RawType result;
@@ -524,7 +524,7 @@ inline void polarDecompose(const glm::mat3& M, glm::quat& outRot, glm::mat3& out
 	z = glm::normalize(glm::cross(x,y));
 	y = glm::normalize(glm::cross(z,x));
 	
-	glm::mat3 R;
+	glm::mat3 R{};
 	R[0] = x;
 	R[1] = y;
 	R[2] = z;
@@ -541,15 +541,15 @@ inline glm::mat4 interpolate(const glm::mat4& A, const glm::mat4& B, float t){
 	glm::mat3 linA = glm::mat3(A);
 	glm::mat3 linB = glm::mat3(B);
 
-	glm::quat rotA, rotB;
-	glm::mat3 stretchA, stretchB;
+	glm::quat rotA{}, rotB{};
+	glm::mat3 stretchA{}, stretchB{};
 	polarDecompose(linA, rotA, stretchA);
 	polarDecompose(linB, rotB, stretchB);
 
 	glm::quat rot = glm::slerp(rotA, rotB, t);
 
 	//linearly interpolate componentwise for scale and shear
-	glm::mat3 stretch ;
+	glm::mat3 stretch{} ;
 	for(int k = 0; k < 3;k++){
 		for(int j=0;j<3;j++){
 			stretch[k][j] = stretchA[k][j] * (1.0f-t) + stretchB[k][j] * t ;

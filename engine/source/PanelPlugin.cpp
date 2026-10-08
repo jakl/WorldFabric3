@@ -143,7 +143,7 @@ SDL_Color s_color;
 
 // Returns the dimensions of a single line of text if it were rendered with createTextImage and didn't wrap
 glm::ivec2 PanelPlugin::getTextLineDimensions(const std::string& text, const std::string& font){
-	glm::ivec2 dim ;
+	glm::ivec2 dim{} ;
 	TTF_SizeUTF8(fonts[font], text.c_str(), &dim.x, &dim.y);
 	return dim;
 }
@@ -165,7 +165,7 @@ double PanelPlugin::getTime() {
 
 // Creates a matrix to be put in the instance pose that places a panel at the given location and extent
 glm::mat4 PanelPlugin::getPose(const glm::vec3& top_left, const glm::vec3& X, const glm::vec3& Y) {
-	glm::mat4 m;
+	glm::mat4 m{};
 	m[0] = glm::vec4(X, 0);
 	m[1] = glm::vec4(Y, 0);
 	m[2] = glm::vec4(glm::normalize(glm::cross(X,Y)), 0);

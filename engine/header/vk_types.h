@@ -1,4 +1,4 @@
-﻿// vulkan_guide.h : Include file for standard system include files,
+// vulkan_guide.h : Include file for standard system include files,
 // or project specific include files.
 //> intro
 #pragma once
@@ -26,20 +26,20 @@
 
 
 struct GPUGLTFMaterial {
-    glm::vec4 colorFactors;
-    glm::vec4 metal_rough_factors;
-    glm::vec4 extra[14];
+    glm::vec4 colorFactors{};
+    glm::vec4 metal_rough_factors{};
+    glm::vec4 extra[14]{};
 };
 
 static_assert(sizeof(GPUGLTFMaterial) == 256);
 
 struct GPUSceneData {
-    glm::mat4 view;
-    glm::mat4 proj;
-    glm::mat4 viewproj;
-    glm::vec4 ambientColor;
-    glm::vec4 sunlightDirection; // w for sun power
-    glm::vec4 sunlightColor;
+    glm::mat4 view{};
+    glm::mat4 proj{};
+    glm::mat4 viewproj{};
+    glm::vec4 ambientColor{};
+    glm::vec4 sunlightDirection{}; // w for sun power
+    glm::vec4 sunlightColor{};
 };
 
 //> mat_types
@@ -54,9 +54,9 @@ struct MaterialPipeline {
 };
 
 struct MaterialInstance {
-    MaterialPipeline* pipeline;
+    MaterialPipeline* pipeline = nullptr;
     VkDescriptorSet materialSet = VK_NULL_HANDLE;
-    MaterialPass passType;
+    MaterialPass passType = MaterialPass::MainColor;
 };
 
 
@@ -81,8 +81,8 @@ struct Node : public IRenderable {
     std::weak_ptr<Node> parent;
     std::vector<std::shared_ptr<Node>> children;
 
-    glm::mat4 localTransform;
-    glm::mat4 worldTransform;
+    glm::mat4 localTransform{};
+    glm::mat4 worldTransform{};
 
     void refreshTransform(const glm::mat4& parentMatrix)
     {

@@ -25,22 +25,22 @@ class BallTestApp : public MachineState {
 public:
 
 	struct MeshPushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress vertexBuffer;
-		VkDeviceAddress instanceBuffer;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress vertexBuffer = 0;
+		VkDeviceAddress instanceBuffer = 0;
 	};
 
 	struct ComputePushConstants {
-		glm::mat4 world_matrix;
-		alignas(16) glm::vec3 camera_position;
-		VkDeviceAddress component_buffer;
-		float test_value;
+		glm::mat4 world_matrix{};
+		alignas(16) glm::vec3 camera_position{};
+		VkDeviceAddress component_buffer = 0;
+		float test_value = 0.0F;
 	};
 
 
 	struct ComputeComponent {
-		glm::vec4 some_data;
+		glm::vec4 some_data{};
 	};
 
 	// A bouncing ball example made to work in the World Fabric Timeline
@@ -236,10 +236,10 @@ private:
 	std::shared_ptr<TriangleShaderProgram> mesh_program;
 	std::shared_ptr<ScreenShaderProgram>  postprocess_shader;
 	std::shared_ptr<ScreenModel<ComputePushConstants, ComputeComponent>> post_effect;
-	int box_model_id;
-	int post_effect_id;
-	glm::mat4 host_transform ;
-	glm::mat4 client_transform ;
+	int box_model_id = 0;
+	int post_effect_id = 0;
+	glm::mat4 host_transform{} ;
+	glm::mat4 client_transform{} ;
 
 
 	bool space_held = false;

@@ -12,15 +12,15 @@
 class BSPNode{
     public:
         BSPNode* parent = nullptr;
-        glm::dvec3 N ;
-        double d ;
+        glm::dvec3 N{} ;
+        double d = 0.0 ;
         std::unique_ptr<BSPNode> inner, outer;
         bool leaf = true;
         bool leaf_inside = false;
         std::vector<Polygon> shape;
         static constexpr double EPSILON = 0.0001;
-        double volume_inside;
-        double volume_outside;
+        double volume_inside = 0.0;
+        double volume_outside = 0.0;
 
         BSPNode();
         // Builds a tree from a mesh

@@ -35,13 +35,13 @@ std::vector<float> OptimizationProblem::minimizeByLBFGS(const std::vector<float>
     //gradient = feval(fun,x.p,2);
     vector<float> g = gradient;
     //preallocate arrays
-    int k = 0, j;
+    int k = 0, j = 0;
     vector<vector<float>> s ;
     vector<float> rho ;
     vector<vector<float>> y ;
     vector<float> nw ;
     vector<float> r, q;
-    float B;
+    float B = 0.0F;
 
     for(int k=0;k<m;k++){
         s.push_back(vector<float>());

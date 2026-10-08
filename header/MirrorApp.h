@@ -54,13 +54,13 @@ public:
 
 	glm::vec3 recording_offset = glm::vec3(10,0,0);
 	double pose_delay = 1.333 ; // amount of time to delay poses to sync up with audio and morph data (this is needed when using a slow voice changer so movement matches audio)
-	int camera_scene_instance;
-	int camera_avatar_instance ;
-	int camera_avatar_instance_2 ; // a mirroed version in case it isn't built for backface culling
+	int camera_scene_instance = 0;
+	int camera_avatar_instance = 0 ;
+	int camera_avatar_instance_2 = 0 ; // a mirroed version in case it isn't built for backface culling
 
 	struct HistoryPose{
 		double time  = - 1; 
-		glm::mat4 pose ;
+		glm::mat4 pose{} ;
 		std::vector<glm::mat4> bone_data ;
 	};
 
@@ -140,7 +140,7 @@ public:
 		std::vector<glm::mat4> tracking ; // tracking position from calibration
 		std::vector<glm::mat4> target ; //target position from calibration
 
-		glm::quat pin_start_orientation ;
+		glm::quat pin_start_orientation{} ;
 
 
 		static inline int next_id = 20000;
@@ -233,11 +233,11 @@ public:
 	void updateBlink(std::vector<float>& weights);
 
 private:
-	glm::mat4 initial_head_matrix;
-	glm::mat4 initial_left_hand_matrix;
-	glm::mat4 initial_right_hand_matrix;
-	glm::mat4 initial_hips_matrix;
-	glm::mat4 avatar_pose;
+	glm::mat4 initial_head_matrix{};
+	glm::mat4 initial_left_hand_matrix{};
+	glm::mat4 initial_right_hand_matrix{};
+	glm::mat4 initial_hips_matrix{};
+	glm::mat4 avatar_pose{};
 
 	int desired_lights = 8 ;
 	std::vector<int> lights = {0} ;

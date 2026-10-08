@@ -79,7 +79,7 @@ public:
 		const ShapeSet* set ;
 		int bucket=0;
 		int index=0;
-		const Physics::ConvexShape* current ;
+		const Physics::ConvexShape* current = nullptr ;
 
 		void advance(){
 			while (bucket < set->getBucketCount() && index >= set->getBucketSize(bucket)) {
@@ -146,8 +146,8 @@ public:
 
 	//Inervse inertia and axis aligned bounding box in world space
 	float inv_mass = 0;
-	glm::mat3 base_inv_moment ;
-	glm::mat3 inv_moment ;
+	glm::mat3 base_inv_moment{} ;
+	glm::mat3 inv_moment{} ;
 	std::pair<glm::vec3, glm::vec3> AABB;
 
 	int render_type = 0 ;
@@ -155,8 +155,8 @@ public:
 	std::vector<int64_t> constraints ;
 
 	bool pin_enabled = false;
-	glm::vec3 pin_world;
-	glm::vec3 pin_local ;
+	glm::vec3 pin_world{};
+	glm::vec3 pin_local{} ;
 	static inline float pin_coefficient = 10.0f;
 	static inline float pin_strength = 0.05f;
 	static inline float max_speed = 40.0f;
@@ -229,12 +229,12 @@ class RigidBodyView : public ObjectView<RigidBody>, public ActionReceiver<RayGra
 public:
 
 
-	int64_t id;
+	int64_t id = 0LL;
 	int scene_id = -1;
 	int trigger_id = -1;
 	std::shared_ptr<const RigidBody> last_view;
-	glm::mat4 pose ;
-	glm::vec3 local_point ;
+	glm::mat4 pose{} ;
+	glm::vec3 local_point{} ;
 	float grab_distance = 0 ;
 
 	//created is called when an objectis observed that ws no observed last time view was called on the world
@@ -257,9 +257,9 @@ public:
 	public:
 		local_ptr<NetPhysics::ShapeSet> shape;
 		std::string model;
-		glm::mat4 render_transform;
-		float elasticity;
-		float friction;
+		glm::mat4 render_transform{};
+		float elasticity = 0.0F;
+		float friction = 0.0F;
 	};
 
 	static inline std::unordered_map<int, ObjectType> types;
@@ -310,17 +310,17 @@ public:
 class Collision {
 public:
 	
-	glm::vec3 warm_impulse;
-	glm::vec3 warm_tangent_impulse;
+	glm::vec3 warm_impulse{};
+	glm::vec3 warm_tangent_impulse{};
 	std::vector<glm::vec3> tangents;
-	glm::vec3 point; // middle point of collision
-	glm::vec3 normal; // normal points from object 1 to object 2
-	glm::vec3 local_a; // point on surface of a in A's local coordinates
-	glm::vec3 local_b; // point on surface of b in B's local coordinates
+	glm::vec3 point{}; // middle point of collision
+	glm::vec3 normal{}; // normal points from object 1 to object 2
+	glm::vec3 local_a{}; // point on surface of a in A's local coordinates
+	glm::vec3 local_b{}; // point on surface of b in B's local coordinates
 	float penetration_depth = 0;
 	float target = 0;
 
-	glm::vec3 next_impulse ; // The next impulse to be applied by tis constraint when checked byits bodies
+	glm::vec3 next_impulse{} ; // The next impulse to be applied by tis constraint when checked byits bodies
 
 
 	static inline const int CONSTRAINT_TYPE = 1;

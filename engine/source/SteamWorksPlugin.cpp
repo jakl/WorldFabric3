@@ -301,7 +301,7 @@ std::shared_ptr<SteamworksPlugin::SteamSocket> SteamworksPlugin::joinLobby(CStea
 
 // Join a Steam ganme by ip and port 
 std::shared_ptr<SteamworksPlugin::SteamSocket> SteamworksPlugin::joinAddress(SteamNetworkingIPAddr& addr) {
-	char address_string[100] ;
+	char address_string[100]{} ;
 	addr.ToString(address_string,100,true) ;
 	printf("Attempting to actually join by ip: %s\n", address_string );
 	steam_socket = std::make_shared<SteamSocket>(); 
@@ -314,8 +314,8 @@ void SteamworksPlugin::onLobbyEntered(LobbyEnter_t* call_back){
 	printf("lobby entered!\n");
 	if(steam_socket && !steam_socket->is_server){
 		CSteamID lobbyID = call_back->m_ulSteamIDLobby;
-		uint32 unGameServerIP;
-		uint16 unGameServerPort;
+		uint32 unGameServerIP = 0;
+		uint16 unGameServerPort = 0;
 		CSteamID hostSteamID;
 
 		// Check if the game has already started
@@ -353,7 +353,7 @@ bool SteamworksPlugin::commandLineHasAddressJoin(const char* command_line) {
 SteamNetworkingIPAddr SteamworksPlugin::getCommandLineAddressJoin(const char* command_line) {
 	
 	const char* pchConnect = strstr(command_line, connect_param.c_str());
-	SteamNetworkingIPAddr address ;
+	SteamNetworkingIPAddr address{} ;
 	address.Clear();
 	if (pchConnect && strlen(command_line) > (pchConnect - command_line) + strlen(connect_param.c_str())){
 		// Address should be right after the +connect
@@ -499,7 +499,7 @@ void SteamworksPlugin::onServerLobbyCreated(LobbyCreated_t* call_back) {
 //-----------------------------------------------------------------------------
 void SteamworksPlugin::OnSteamServersConnected(SteamServersConnected_t* pLogonSuccess){
 	//printf("OnSteamServersConnected\n");
-	SteamNetworkingIPAddr addr;
+	SteamNetworkingIPAddr addr{};
 	addr.Clear();                         // 0.0.0.0
 	addr.m_port = static_cast<uint16_t>(lobby_info.port);
 	steam_socket->hostDedicated(addr);
@@ -737,7 +737,7 @@ void SteamworksPlugin::SteamSocket::join(CSteamID lobby_to_join){
 
 // Open a steam client socket to connect to the given id
 void SteamworksPlugin::SteamSocket::join(SteamNetworkingIPAddr address_to_join) {
-	char address_string[50];
+	char address_string[50]{};
 	address_to_join.ToString(address_string, 50, true) ;
 	printf("Socket attempting to connect to ip: %s\n", address_string);
 	std::string command = "+connect " + std::string(address_string) ;
@@ -748,7 +748,7 @@ void SteamworksPlugin::SteamSocket::join(SteamNetworkingIPAddr address_to_join) 
 
 	// Send an auth ticket as the first packet
 	constexpr int max_ticket_size = 1024 ;
-	uint8 ticket_buffer[max_ticket_size];
+	uint8 ticket_buffer[max_ticket_size]{};
 	uint32 ticket_length = 0;
 	HAuthTicket hTicket = SteamUser()->GetAuthSessionTicket(
 		ticket_buffer, max_ticket_size, &ticket_length, nullptr);
@@ -847,7 +847,7 @@ bool SteamworksPlugin::SteamSocket::send(int receiver_id, const std::vector<char
 		return false ;
 	}
 
-	EResult res ;
+	EResult res = k_EResultFail;
 	if(is_dedicated){
 		//printf("Packet size: %d\n", (uint32_t)data.size()) ;
 		res = SteamGameServerNetworkingSockets()->SendMessageToConnection(connections[receiver_id], data.data(), (uint32_t)data.size(), k_nSteamNetworkingSend_ReliableNoNagle, nullptr);

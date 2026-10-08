@@ -10,8 +10,8 @@
 class RadialVolume{
 public:
     // Bounding sphere
-    glm::dvec3 center ;
-    double radius;
+    glm::dvec3 center{} ;
+    double radius = 0.0;
     // planes stored relative to center
     std::vector<glm::dvec3> N; 
     std::vector<double> d;

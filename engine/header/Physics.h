@@ -154,7 +154,7 @@ public:
 
 class RigidBody : public PosedBody {
 public:
-	int64_t id ;
+	int64_t id = 0LL ;
 	glm::vec3 position = glm::vec3(0,0,0) ;
 	glm::vec3 velocity = glm::vec3(0, 0, 0);
 	glm::quat orientation = glm::quat(1, 0, 0, 0);
@@ -170,8 +170,8 @@ public:
 
 	//Inervse inertia and axis aligned bounding box in world space
 	float inv_mass = 0;
-	glm::mat3 base_inv_moment ;
-	glm::mat3 inv_moment ;
+	glm::mat3 base_inv_moment{} ;
+	glm::mat3 inv_moment{} ;
 	std::pair<glm::vec3, glm::vec3> AABB;
 
 	RigidBody(const std::shared_ptr<ConvexShape>& s);
@@ -243,9 +243,9 @@ public:
 
 //Point in minkowski difference space
 struct SupportPoint {
-	glm::vec3 x;
+	glm::vec3 x{};
 	// hold onto points on shapes for use in subsequent steps
-	glm::vec3 a, b;
+	glm::vec3 a{}, b{};
 
 	//Overload linear operators to allow manipulation in barycentric coordinates
 	SupportPoint operator*(const float& scale) {
@@ -262,7 +262,7 @@ struct SupportTriangle {
 	SupportPoint A;
 	SupportPoint B;
 	SupportPoint C;
-	glm::vec3 normal; // normal should be normalize(cross(B - A, C - A))
+	glm::vec3 normal{}; // normal should be normalize(cross(B - A, C - A))
 	float d = 0; // normal * x + d > 0 means in front of the plane
 
 	SupportTriangle(const SupportPoint& a, const  SupportPoint& b, const  SupportPoint& c) : A(a), B(b), C(c) {
@@ -277,8 +277,8 @@ struct SupportTriangle {
 
 //We use edges to build out expanding polytope as points are added
 struct SupportEdge {
-	SupportPoint A;
-	SupportPoint B;
+	SupportPoint A{};
+	SupportPoint B{};
 	bool disabled = false;
 };
 
@@ -289,13 +289,13 @@ public:
 	int shape1 = -1 ;
 	int64_t id2 = -1;
 	int shape2 = -1 ;
-	glm::vec3 warm_impulse;
-	glm::vec3 warm_tangent_impulse;
+	glm::vec3 warm_impulse{};
+	glm::vec3 warm_tangent_impulse{};
 	std::vector<glm::vec3> tangents;
-	glm::vec3 point; // middle point of collision
-	glm::vec3 normal; // normal points from object 1 to object 2
-	glm::vec3 local_a ; // point on surface of a in A's local coordinates
-	glm::vec3 local_b ; // point on surface of b in B's local coordinates
+	glm::vec3 point{}; // middle point of collision
+	glm::vec3 normal{}; // normal points from object 1 to object 2
+	glm::vec3 local_a{} ; // point on surface of a in A's local coordinates
+	glm::vec3 local_b{} ; // point on surface of b in B's local coordinates
 	float penetration_depth = 0;
 	float target = 0;
 	
@@ -347,7 +347,7 @@ public:
 //A simple collision that uses a single point and does not maintain a manifold
 class ManifoldCollision : public ConstraintSet {
 public:
-	int64_t hash ;
+	int64_t hash = 0 ;
 	std::vector<Collision> points;
 	static inline float squared_distance_for_match = 1e-5f ;
 	static inline int max_collision_points = 4 ;
@@ -378,10 +378,10 @@ public:
 	int64_t id1 = -1;
 	int64_t id2 = -1;
 	glm::vec3 warm_impulse = glm::vec3(0);
-	glm::vec3 target; // target velocity difference between the two points
-	glm::vec3 point ; //average of the two points in world space
-	glm::vec3 local_a; // point of a in A's local coordinates
-	glm::vec3 local_b; // point of b in B's local coordinates
+	glm::vec3 target{}; // target velocity difference between the two points
+	glm::vec3 point{} ; //average of the two points in world space
+	glm::vec3 local_a{}; // point of a in A's local coordinates
+	glm::vec3 local_b{}; // point of b in B's local coordinates
 	float spring_coefficient = 5.0f ; // Velocity applied per error to keep points together
 	float max_impulse = 0.01f ; // maximum impulse applied, limits force of constraint
 
@@ -399,7 +399,7 @@ public:
 
 class PinSet : public ConstraintSet{
 public:
-	int64_t hash;
+	int64_t hash = 0;
 	std::vector<Pin> points;
 
 	PinSet(int64_t h) : hash(h) {
@@ -465,9 +465,9 @@ public:
 	public:
 		std::vector<std::shared_ptr<Physics::ConvexShape>> shape;
 		std::string model;
-		glm::mat4 render_transform;
-		float elasticity;
-		float friction;
+		glm::mat4 render_transform{};
+		float elasticity = 0.0F;
+		float friction = 0.0F;
 	};
 
 	//Bounding box of cell

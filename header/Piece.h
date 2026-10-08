@@ -21,8 +21,8 @@ public:
 
 	enum COLOR { black, white }; // never change the order of these lol!
 	std::string model_name;
-	COLOR color;
-	int64_t board_id;
+	COLOR color = black;
+	int64_t board_id = 0LL;
 	bool has_moved = false;
 	int moved_count = 0;
 	glm::vec3 last_moved_position = glm::vec3(0);
@@ -62,7 +62,7 @@ class PieceView : public ObjectView<Piece>, public virtual ActionReceiver<ChessM
 public:
 	int scene_id = -1;
 	int trigger_id = -1;
-	glm::mat4 pose;
+	glm::mat4 pose{};
 	std::shared_ptr<const Piece> last_observation;
 
 	//created is called when an objectis observed that ws no observed last time view was called on the world

@@ -21,7 +21,7 @@ void CollisionTestApp::enter(std::shared_ptr<MachineState> from) {
 	particles->setPose(mouse_particle_id, particle_pose);
 
 	// Set up a light for the scene
-	ScenePlugin::LightComponent lc;
+	ScenePlugin::LightComponent lc{};
 	glm::vec3 light_position = glm::vec3(15, 15, -5);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 	lc.light_color = glm::vec4(0.5, 0.5, 0.5, 1);
@@ -80,7 +80,7 @@ void CollisionTestApp::run() {
 
 	float t = -1; // TODO implement raytracing to make balls clickable
 	//Place the mouse particle
-	glm::vec3 mouse_position;
+	glm::vec3 mouse_position{};
 	if (t > 0) { // collision
 		particles->setColor(mouse_particle_id, glm::vec4(0, 0, 1, 1)); // blue
 		mouse_position = window->window_target->camera_position + window->getMouseRay() * t; // hit postion
@@ -112,7 +112,7 @@ void CollisionTestApp::run() {
 		glm::mat4 current_right_hand_pose = controls->getPose("/actions/general/in/right_pose");
 		int c=0 ;
 		for (auto& inst : instances) {
-			glm::mat4 hand_pose ;
+			glm::mat4 hand_pose{} ;
 			if(c == 0){
 				hand_pose = current_left_hand_pose ;
 			}else if(c == 1){

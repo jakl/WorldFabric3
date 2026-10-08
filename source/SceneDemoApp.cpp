@@ -86,7 +86,7 @@ void SceneDemoApp::enter(std::shared_ptr<MachineState> from) {
 	glm::vec3 pos = glm::vec3(0, 16, 10);
 	glm::vec3 look_at = glm::vec3(0, 0, 0);
 
-	ScenePlugin::LightComponent lc ;
+	ScenePlugin::LightComponent lc{} ;
 	lc.light_color = glm::vec4(1, 1, 1, 1);
 	scene->createLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(pos, look_at, glm::vec3(0, 1, 0), 0.6f, 30, 2048, 0, lc);
 

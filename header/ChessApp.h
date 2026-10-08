@@ -57,9 +57,9 @@ namespace Chess {
 		float camera_theta = 0.5f;
 		float camera_thi = 0.8f;
 		bool mouse_down_left = false;
-		glm::vec2 mouse_down_position_left;
+		glm::vec2 mouse_down_position_left{};
 		bool mouse_down_right = false;
-		glm::vec2 mouse_down_position_right;
+		glm::vec2 mouse_down_position_right{};
 		float camera_down_theta = 0.0f;
 		float camera_down_thi = 0.0f;
 		float camera_x_speed = 0.002f;

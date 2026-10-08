@@ -121,7 +121,7 @@ namespace Chess {
 		};
 
 		// Set up a light for the scene
-		ScenePlugin::LightComponent lc;
+		ScenePlugin::LightComponent lc{};
 		glm::vec3 light_position = glm::vec3(4, 10, -10);
 		lc.light_color = glm::vec4(0.9f, 0.9f, 0.9f, 1);
 		light_effect_id = scene->createLight<ScenePlugin::ScreenPushConstants, ScenePlugin::LightComponent>(light_position, light_look_at, glm::vec3(0, 1, 0), 0.7f, 20, 1024, 0, lc);

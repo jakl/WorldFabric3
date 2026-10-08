@@ -438,7 +438,7 @@ int BallTestApp::createBlock(VulkanPlugin* renderer, int transform_group, glm::v
 	transform = glm::scale(transform, max - min);
 	glm::mat4 scaled = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
 
-	GLTF::Instance256 new_instance;
+	GLTF::Instance256 new_instance{};
 	
 	if(transform_group == host_transform_group){
 		new_instance.root = host_transform * scaled;

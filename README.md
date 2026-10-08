@@ -16,6 +16,22 @@ cmake --build --preset x64-release
 
 Run from the repo root so `./assets` and `./Narball` resolve, e.g. `build\gcc-release\WorldFabric.exe`, or `cmake --build --preset gcc-release --target run`. The DLLs from `dll/` are copied next to the exe automatically.
 
+### Choosing the app
+The `WF_APP` cache variable picks what the exe starts (default `Chess`). Changing it recompiles only `source/Main.cpp`:
+```
+cmake --preset gcc-release -DWF_APP=Narball
+cmake --build --preset gcc-release
+```
+In PowerShell, quote the argument when it contains a variable (`"-DWF_APP=$app"`). Otherwise PowerShell passes `$app` through literally.
+
+| `WF_APP` | Starts |
+| --- | --- |
+| `Chess` | `Chess::ChessApp` |
+| `Narball`, `NarballServer`, `NarballDesync` | `Narball::main` as the game, dedicated server, or desync checker (`NarballDesync` compares `event_log_1.csv` and `event_log_2.csv` from the working directory) |
+| `VulkanDemo`, `SceneDemo`, `SceneDemo2`, `BallTest`, `SocketTest`, `BallThrow`, `Mirror`, `Trace`, `CollisionTest`, `ConstraintTest`, `Pyramid`, `NetPhysics` | the matching `*App` state (`SocketTest` is the `SocketTest` class) |
+
+In Visual Studio, set it under Project > CMake Settings, or in the cache editor. To add an app, append its name to `WF_APPS` in `CMakeLists.txt` and add an entry to the `apps` table in `source/Main.cpp`. A `static_assert` catches a name that's listed in CMake but missing from the table.
+
 ## Visual Studio
 1. Install Visual Studio with the "Desktop development with C++" workload (includes CMake and Ninja).
 2. File > Open > Folder and select the repo root.
@@ -51,5 +67,5 @@ The prebuilt SDKs in `lib/` and `dll/` are compiled with MSVC. GCC and MSVC disa
 - **Unused libraries.** `CMakeLists.txt` links every `.lib` the old project did, but the exe only imports `SDL3`, `SDL3_ttf`, `OpenAL32`, `openvr_api`, `steam_api64` and `vulkan-1`. `glew32`, `OpenGL32`, `SDL3_image/mixer/net/rtf`, `SDL3_test`, `glew32s` and `sdkencryptedappticket64` could likely be dropped.
 - **Unused DLLs.** All of `dll/` is copied next to the exe. `SDL2.dll`, `freeglut.dll`, `glfw3.dll`, `glew32.dll`, `steam_api.dll` (32-bit) and the SDL3 extension DLLs aren't imported. `ucrtbase.dll` shouldn't be redistributed this way; it ships with Windows.
 - **Shaders aren't built by CMake.** The committed `.spv` files are used as-is; after editing a shader, rerun `shader/compile_shaders.bat` or `Narball/shader/compile_shaders.bat`. A CMake step using `glslc` from the Vulkan SDK would keep them in sync.
-- **Choosing the app means editing code.** `main()` in `source/Main.cpp` calls `exampleMain`; switching to Narball means uncommenting `Narball::main`. A command-line flag or CMake option would avoid that.
+- **Only some apps have been run.** The `WF_APP` switch was smoke-tested with `Chess`, `Narball` and `Pyramid`. The other demo states compile but haven't been launched since the CMake move.
 - **No CI.** A Windows CI job building both `gcc-release` and `x64-release` would catch the kind of MSVC-only code that broke the GCC build.

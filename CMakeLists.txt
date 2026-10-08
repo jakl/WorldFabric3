@@ -109,6 +109,21 @@ file(GLOB WF_HEADERS CONFIGURE_DEPENDS
 
 add_executable(WorldFabric ${WF_SOURCES} ${WF_HEADERS})
 
+# Which app the exe boots. Must match a name in the apps table in source/Main.cpp.
+set(WF_APPS
+    Chess Narball NarballServer NarballDesync
+    VulkanDemo SceneDemo SceneDemo2 BallTest SocketTest BallThrow
+    Mirror Trace CollisionTest ConstraintTest Pyramid NetPhysics)
+set(WF_APP Chess CACHE STRING "App started by WorldFabric.exe")
+set_property(CACHE WF_APP PROPERTY STRINGS ${WF_APPS})
+if(NOT WF_APP IN_LIST WF_APPS)
+    list(JOIN WF_APPS ", " WF_APPS_TEXT)
+    message(FATAL_ERROR "WF_APP='${WF_APP}' is not one of: ${WF_APPS_TEXT}")
+endif()
+message(STATUS "WorldFabric app: ${WF_APP} (change with -DWF_APP=<name>)")
+# Only Main.cpp sees the define, so switching apps recompiles just that file.
+set_property(SOURCE source/Main.cpp APPEND PROPERTY COMPILE_DEFINITIONS "WF_APP=\"${WF_APP}\"")
+
 # The repo's include/ must come before the Vulkan SDK so its bundled SDL/GLM copies don't win.
 target_include_directories(WorldFabric PRIVATE
     engine/header

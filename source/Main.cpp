@@ -40,6 +40,7 @@
 #include <set>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <chrono>
 #include <thread>
 
@@ -389,56 +390,68 @@ void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, const std:
 }
 
 
+// Selected at configure time with -DWF_APP=<name>; see WF_APPS in CMakeLists.txt
+#ifndef WF_APP
+#define WF_APP "Chess"
+#endif
+
+template <class App>
+void startApp(StatePlugin* app) {
+	app->add(App::state_name, std::make_shared<App>());
+	app->setState(App::state_name);
+}
+
+struct AppEntry {
+	std::string_view name;
+	void (*start)(StatePlugin*);
+};
+
+// Narball apps replace exampleMain entirely, so they aren't state machine entries
+struct NarballEntry {
+	std::string_view name;
+	Narball::AppType type;
+};
+
+constexpr NarballEntry narball_apps[] = {
+	{ "Narball", Narball::GAME },
+	{ "NarballServer", Narball::DEDICATED_SERVER },
+	{ "NarballDesync", Narball::DESYNC_CHECKER },
+};
+
+constexpr AppEntry apps[] = {
+	{ "Chess", startApp<Chess::ChessApp> },
+	{ "VulkanDemo", startApp<VulkanDemoApp> },
+	{ "SceneDemo", startApp<SceneDemoApp> },
+	{ "SceneDemo2", startApp<SceneDemoApp2> },
+	{ "BallTest", startApp<BallTestApp> },
+	{ "SocketTest", startApp<SocketTest> },
+	{ "BallThrow", startApp<BallThrowApp> },
+	{ "Mirror", startApp<MirrorApp> },
+	{ "Trace", startApp<TraceApp> },
+	{ "CollisionTest", startApp<CollisionTestApp> },
+	{ "ConstraintTest", startApp<ConstraintTestApp> },
+	{ "Pyramid", startApp<PyramidApp> },
+	{ "NetPhysics", startApp<NetPhysicsApp> },
+};
+
+template <class Entry, size_t N>
+constexpr const Entry* findApp(const Entry (&table)[N], std::string_view name) {
+	for (const Entry& entry : table) {
+		if (entry.name == name) {
+			return &entry;
+		}
+	}
+	return nullptr;
+}
+
+constexpr const NarballEntry* narball_app = findApp(narball_apps, WF_APP);
+constexpr const AppEntry* selected_app = findApp(apps, WF_APP);
+
+static_assert(narball_app != nullptr || selected_app != nullptr, "WF_APP must name an entry in the narball_apps or apps table in Main.cpp");
+
 void setupGameStates() {
-
-	VulkanPlugin* window = getTool<VulkanPlugin>();
-	OpenXRPlugin* xr = getTool<OpenXRPlugin>();
-	ScenePlugin* scene = getTool<ScenePlugin>();
-	ParticlePlugin* particles = getTool<ParticlePlugin>();
-	WorldPlugin* worlds = getTool<WorldPlugin>();
-	StatePlugin* app = getTool<StatePlugin>();
-
-
-	//app->add(VulkanDemoApp::state_name, std::shared_ptr<VulkanDemoApp>(new VulkanDemoApp()));
-	//app->setState(VulkanDemoApp::state_name);
-
-	//app->add(SceneDemoApp::state_name, std::shared_ptr<SceneDemoApp>(new SceneDemoApp()));
-	//app->setState(SceneDemoApp::state_name);
-
-	//app->add(SceneDemoApp2::state_name, std::shared_ptr<SceneDemoApp2>(new SceneDemoApp2()));
-	//app->setState(SceneDemoApp2::state_name);
-
-	//app->add(BallTestApp::state_name, std::shared_ptr<BallTestApp>(new BallTestApp()));
-	//app->setState(BallTestApp::state_name);
-
-	
-
-	//app->add(SocketTest::state_name, std::shared_ptr<SocketTest>(new SocketTest()));
-	//app->setState(SocketTest::state_name);
-
-	//app->add(BallThrowApp::state_name, std::shared_ptr<BallThrowApp>(new BallThrowApp()));
-	//app->setState(BallThrowApp::state_name);
-
-	//app->add(MirrorApp::state_name, std::shared_ptr<MirrorApp>(new MirrorApp()));
-	//app->setState(MirrorApp::state_name);
-
-	//app->add(TraceApp::state_name, std::shared_ptr<TraceApp>(new TraceApp()));
-	//app->setState(TraceApp::state_name);
-
-	//app->add(CollisionTestApp::state_name, std::make_shared<CollisionTestApp>());
-	//app->setState(CollisionTestApp::state_name);
-
-	//app->add(ConstraintTestApp::state_name, std::shared_ptr<ConstraintTestApp>(new ConstraintTestApp()));
-	//app->setState(ConstraintTestApp::state_name);
-
-	//app->add(PyramidApp::state_name, std::shared_ptr<PyramidApp>(new PyramidApp()));
-	//app->setState(PyramidApp::state_name);
-
-	// app->add(NetPhysicsApp::state_name, std::make_shared<NetPhysicsApp>());
-	// app->setState(NetPhysicsApp::state_name);
-
-	app->add(Chess::ChessApp::state_name, std::shared_ptr<Chess::ChessApp>(new Chess::ChessApp()));
-	app->setState(Chess::ChessApp::state_name);
+	printf("Starting app %s\n", WF_APP);
+	selected_app->start(getTool<StatePlugin>());
 }
 
 
@@ -578,8 +591,13 @@ int exampleMain(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
 	_set_error_mode(_OUT_TO_STDERR);
-	//Narball::main(argc, argv);
-	exampleMain(argc, argv);
+	if constexpr (narball_app != nullptr) {
+		Narball::which_app = narball_app->type;
+		return Narball::main(argc, argv);
+	}
+	else {
+		return exampleMain(argc, argv);
+	}
 	//CSVLog::findDesync({ "event_log_1.csv", "event_log_2.csv" }, "time", 1.0);
 }
 

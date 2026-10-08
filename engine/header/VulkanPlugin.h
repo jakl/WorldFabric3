@@ -23,6 +23,7 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <mutex>
 #include <unordered_set>
 #include <vector>
 
@@ -288,6 +289,19 @@ public:
 	static inline int millis_to_hold_buffer = 50; // buffers get a few milliseconds before being destroyed after going out of scope to give pending off thread GPU actions time to complete
 	static inline int frames_to_hold_buffer = 3 ; // In case frame rate hitches, like when loading large models, also make sure buffers hang around for frame completion
 	static inline int frame_number = 0 ; // number of frames displayed so far
+	static inline int completed_frame = -1 ; // newest frame_number whose GPU work is known to have finished, proven by its render fence
+
+	// raw Vulkan buffers (not VMA) that must outlive every command buffer that referenced them
+	struct GPUBufferToDestroy {
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VkDeviceMemory memory = VK_NULL_HANDLE;
+		int frame = 0; // frame_number being recorded when the buffer was retired
+	};
+	static inline std::mutex gpu_buffers_lock;
+	static inline std::vector<GPUBufferToDestroy> gpu_buffers_to_destroy;
+
+	// destroys the buffer and memory once the GPU has finished the frame currently being recorded; safe to call from any thread
+	static void destroyAfterGPU(VkBuffer buffer, VkDeviceMemory memory);
 
 	static inline std::vector<std::pair<VkSampler, std::chrono::high_resolution_clock::time_point>> samplers_to_destroy; // This is stored in the vulkan plugin to prevent the global from being duplicated for different templated models
 
@@ -392,6 +406,8 @@ public:
 
 	std::shared_ptr<VulkanBuffer> createVulkanBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	void destroyBuffer(BufferToDestroy& buffer);
+
+	void destroyFinishedGPUBuffers();
 
 	//returns memory type to use when the given flasg are required
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -793,9 +809,6 @@ public:
 	VkDeviceMemory draw_indirect_buffer_memory = VK_NULL_HANDLE;
 	bool draw_indirect_buffer_allocated = false;
 
-	VkBuffer last_draw_indirect_buffer = VK_NULL_HANDLE; // hold onto reference to previous so we don't clear it while it's still in use
-	VkDeviceMemory last_draw_indirect_buffer_memory = VK_NULL_HANDLE;
-
 	// Texture data
 	std::vector<std::shared_ptr<WFImage>> textures;
 	bool textures_changed = false;
@@ -823,6 +836,7 @@ public:
 	}
 
 	~TriangleModel(){
+		VulkanPlugin::destroyAfterGPU(draw_indirect_buffer, draw_indirect_buffer_memory);
 		/* TODO This crashes when the app exits, but without it we are leaking a small amount of GPU memory when a model is unloaded
 		if (has_descriptor) {
 			getTool<VulkanPlugin>()->destroyBinding(texture_set_descriptor);
@@ -1040,22 +1054,11 @@ public:
 		program->setPushConstants(cmd, push_constants);
 
 		if (!draw_indirect_buffer_allocated) {
-			
-			if(draw_indirect_buffer){ // if this isn't our first buffer
-			
-				//clear buffer we were holding onto just in case
-				if(last_draw_indirect_buffer){
-					vkDestroyBuffer(renderer->device, last_draw_indirect_buffer, nullptr); // delete previous buffer from GPU
-					if (last_draw_indirect_buffer_memory) {
-						vkFreeMemory(renderer->device, last_draw_indirect_buffer_memory, nullptr); // TODO should also clean these up when triangle model destructed
-					}
-				}
 
-				//hold onto buffer for a bit in case it's in use
-				last_draw_indirect_buffer = draw_indirect_buffer ;
-				last_draw_indirect_buffer_memory = draw_indirect_buffer_memory ;
-				
-			}
+			// earlier frames, or an earlier render target in this frame, may still be drawing from the previous buffer
+			VulkanPlugin::destroyAfterGPU(draw_indirect_buffer, draw_indirect_buffer_memory);
+			draw_indirect_buffer = VK_NULL_HANDLE;
+			draw_indirect_buffer_memory = VK_NULL_HANDLE;
 
 			VkDrawIndexedIndirectCommand drawCmd{};
 			drawCmd.indexCount = (uint32_t)(index_buffer->object_count);

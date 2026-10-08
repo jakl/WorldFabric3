@@ -146,6 +146,8 @@ void VulkanPlugin::run() {
 	lock.lock();
 	if (resize_requested) {
 		vkDeviceWaitIdle(device);
+		completed_frame = std::max(completed_frame, frame_number - 1);
+		destroyFinishedGPUBuffers();
 		SDL_GetWindowSize(window, &window_width, &window_height);
 		destroySwapchain(vkbSwapchain, device);
 		createSwapchain(window_width, window_height, VK_FORMAT_B8G8R8A8_UNORM, physical_device, device, SDL_vulkan_surface);
@@ -593,6 +595,30 @@ std::shared_ptr<VulkanBuffer> VulkanPlugin::createVulkanBuffer(size_t allocSize,
 	return newBuffer;
 }
 
+void VulkanPlugin::destroyAfterGPU(VkBuffer buffer, VkDeviceMemory memory){
+	if (buffer == VK_NULL_HANDLE && memory == VK_NULL_HANDLE) {
+		return;
+	}
+	std::lock_guard<std::mutex> guard(gpu_buffers_lock);
+	gpu_buffers_to_destroy.push_back({ buffer, memory, frame_number });
+}
+
+void VulkanPlugin::destroyFinishedGPUBuffers(){
+	std::lock_guard<std::mutex> guard(gpu_buffers_lock);
+	std::erase_if(gpu_buffers_to_destroy, [this](const GPUBufferToDestroy& retired) {
+		if (retired.frame > completed_frame) {
+			return false;
+		}
+		if (retired.buffer) {
+			vkDestroyBuffer(device, retired.buffer, nullptr);
+		}
+		if (retired.memory) {
+			vkFreeMemory(device, retired.memory, nullptr);
+		}
+		return true;
+	});
+}
+
 void VulkanPlugin::destroyBuffer(BufferToDestroy& buffer){
 
 	VmaAllocationInfo allocInfo;
@@ -723,6 +749,9 @@ void VulkanPlugin::draw(){
 	auto current_frame = frames[frame_number % CHAIN_FRAMES];
 	//wait until the gpu has finished rendering the last frame. Timeout in micros
 	VK_CHECK(vkWaitForFences(device, 1, &current_frame.render_fence, true, 10000000)); // continue in 1/100th of a second regardless to not block other plugins
+	// this fence was last submitted no earlier than CHAIN_FRAMES frames ago, and the queue finishes submissions in order
+	completed_frame = std::max(completed_frame, frame_number - (int)CHAIN_FRAMES);
+	destroyFinishedGPUBuffers();
 	logTimes();
 
 	//current_frame._deletionQueue.flush();

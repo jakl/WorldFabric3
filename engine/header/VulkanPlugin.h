@@ -510,10 +510,13 @@ public:
 		}
 		std::shared_ptr <VulkanBuffer> staging = createVulkanBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 			
-		void* staging_data;
-		vmaMapMemory(VMA_allocator, staging->allocation, &staging_data);
+		// void* staging_data;
+		// vmaMapMemory(VMA_allocator, staging->allocation, &staging_data);
 
-		memcpy(staging_data, input_data.data(), buffer_size);// copy vertex buffer into staging
+		// memcpy(staging_data, input_data.data(), buffer_size);// copy vertex buffer into staging
+		//
+		// createVulkanBuffer makes every buffer persistently mapped; a vmaMapMemory here would need a matching unmap before destruction
+		memcpy(staging->info.pMappedData, input_data.data(), buffer_size);// copy vertex buffer into staging
 
 		// move from staging to given buffer
 		VkBufferCopy data_copy{ 0 };
@@ -792,18 +795,18 @@ public:
 	bool num_instances_changed = false; // changign he size of the buffer requires changign the binding descriptor
 
 	// Buffer to hold the command for indirect drawing
-	VkBuffer draw_indirect_buffer;
-	VkDeviceMemory draw_indirect_buffer_memory;
+	VkBuffer draw_indirect_buffer = VK_NULL_HANDLE;
+	VkDeviceMemory draw_indirect_buffer_memory = VK_NULL_HANDLE;
 	bool draw_indirect_buffer_allocated = false;
 
-	VkBuffer last_draw_indirect_buffer; // hold onto reference to previous so we don't clear it while it's still in use
-	VkDeviceMemory last_draw_indirect_buffer_memory;
+	VkBuffer last_draw_indirect_buffer = VK_NULL_HANDLE; // hold onto reference to previous so we don't clear it while it's still in use
+	VkDeviceMemory last_draw_indirect_buffer_memory = VK_NULL_HANDLE;
 
 	// Texture data
 	std::vector<std::shared_ptr<WFImage>> textures;
 	bool textures_changed = false;
 	bool has_descriptor = false;
-	VkDescriptorSet texture_set_descriptor ;
+	VkDescriptorSet texture_set_descriptor = VK_NULL_HANDLE;
 
 
 	PushConstants push_constants ;

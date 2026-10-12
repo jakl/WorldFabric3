@@ -49,13 +49,13 @@ enum class MaterialPass :uint8_t {
     Other
 };
 struct MaterialPipeline {
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
+	VkPipeline pipeline = VK_NULL_HANDLE;
+	VkPipelineLayout layout = VK_NULL_HANDLE;
 };
 
 struct MaterialInstance {
     MaterialPipeline* pipeline;
-    VkDescriptorSet materialSet;
+    VkDescriptorSet materialSet = VK_NULL_HANDLE;
     MaterialPass passType;
 };
 

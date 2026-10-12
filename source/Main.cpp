@@ -330,7 +330,7 @@ void setupPlugins(std::vector<std::shared_ptr<AsyncPlugin>>& plugins, const std:
 	addTool(steamworks);
 	std::shared_ptr<AudioPlugin> sound_system(new AudioPlugin());
 	addTool(sound_system);
-	std::shared_ptr<VulkanPlugin> window(new VulkanPlugin(app_title, false, true)); // vsync, fullscreen
+	std::shared_ptr<VulkanPlugin> window(new VulkanPlugin(app_title, false, false)); // vsync, fullscreen
 	addTool(window);
 	std::shared_ptr<StatePlugin> app(new StatePlugin());
 	addTool(app);
@@ -585,7 +585,7 @@ int exampleMain(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
 	_set_error_mode(_OUT_TO_STDERR);
-	//Narball::main(argc, argv);
-	exampleMain(argc, argv);
+	Narball::main(argc, argv);
+	//exampleMain(argc, argv);
 	//CSVLog::findDesync({ "event_log_1.csv", "event_log_2.csv" }, "time", 1.0);
 }

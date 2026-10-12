@@ -120,8 +120,8 @@ int AudioPlugin::addWAV(const std::string& file_path, int volume_group) {
         SoundData sound_data = AudioPlugin::loadWAV(file_data);
         return addSound( sound_data, volume_group);
     }else{
-		return -1 ;
         printf("Could not load sound : %s\n", file_path.c_str());
+		return -1 ;
     }
 }
 
@@ -132,8 +132,8 @@ int AudioPlugin::addOGG(const std::string& file_path, int volume_group) {
 		SoundData sound_data = AudioPlugin::loadOGG(file_data);
 		return addSound(sound_data, volume_group);
 	} else {
-		return -1;
 		printf("Could not load sound : %s\n", file_path.c_str());
+		return -1;
 	}
 }
 
@@ -322,7 +322,7 @@ AudioPlugin::SoundData AudioPlugin::loadOGG(Variant& file_bytes){
 		printf("Loaded stereo file which will not work with openAL 3D sound!\n");
 		al_format = AL_FORMAT_STEREO16;
 	}else {
-		printf("Ogg file has %d channels – only mono or stereo are supported.\n", channels);
+		printf("Ogg file has %d channels ï¿½ only mono or stereo are supported.\n", channels);
 		free(pcm);
 		return SoundData();
 	}
